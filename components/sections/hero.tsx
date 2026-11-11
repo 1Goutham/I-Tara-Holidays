@@ -47,7 +47,7 @@ export function Hero() {
       gsap.set(split.lines, { yPercent: 112 });
       const tl = gsap.timeline();
       if (s) tl.to(s, { intro: 1, duration: 3.4, ease: 'power2.out' }, 0);
-      tl.from(q('.scene__sun'), { yPercent: 26, duration: 3.6, ease: 'power3.out' }, 0)
+      tl.from(q('.scene__sun'), { autoAlpha: 0, scale: 0.92, duration: 3.2, ease: 'power2.out' }, 0.2)
         .from(q('.scene__branch'), { xPercent: 8, yPercent: -10, duration: 2.6, ease: 'power3.out' }, 0.1)
         .from(q('.scene__bushes'), { yPercent: 14, duration: 2.4, ease: 'power3.out' }, 0.1);
       tl.to(split.lines, { yPercent: 0, duration: 1.8, stagger: 0.14, ease: 'power4.out' }, 0.45)

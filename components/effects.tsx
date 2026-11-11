@@ -1,35 +1,73 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useSite } from './providers';
-import { gsap, ScrollTrigger } from '@/lib/gsap';
+import { getLenis, gsap, ScrollTrigger } from '@/lib/gsap';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 /**
- * No loading screen: release the page as soon as the web fonts are ready (max 700ms) so the
- * first animated frame is typographically final, then refresh scroll positions once
- * everything (fonts, images) has settled.
+ * Minimal loader: the logo mark and a hairline that follows the hero's assets.
+ * Releases the page (and the hero's dawn entrance) once fonts and the scene are ready —
+ * never later than 6s, so a slow connection still gets the page.
  */
 export function Boot() {
   const { setReady } = useSite();
+  const [progress, setProgress] = useState(0.08);
+  const [leaving, setLeaving] = useState(false);
+  const [gone, setGone] = useState(false);
+
   useEffect(() => {
-    let done = false;
+    let released = false;
+    let heroReady = false;
+    let fontsReady = false;
+    document.body.classList.add('is-loading');
+    getLenis()?.stop();
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const release = () => {
-      if (done) return;
-      done = true;
-      document.body.classList.add('is-ready');
-      setReady(true);
+      if (released) return;
+      released = true;
+      setProgress(1);
+      timers.push(setTimeout(() => {
+        setLeaving(true);
+        document.body.classList.remove('is-loading');
+        document.body.classList.add('is-ready');
+        getLenis()?.start();
+        setReady(true);
+        ScrollTrigger.refresh();
+      }, 260));
+      timers.push(setTimeout(() => setGone(true), 1400));
     };
-    const t = setTimeout(release, 700);
-    document.fonts?.ready.then(release).catch(release);
+    const check = () => heroReady && fontsReady && release();
+    const onProgress = (e: Event) => setProgress((p) => Math.max(p, 0.1 + 0.85 * Number((e as CustomEvent).detail || 0)));
+    const onReady = () => {
+      heroReady = true;
+      check();
+    };
+    window.addEventListener('itara:hero-progress', onProgress);
+    window.addEventListener('itara:hero-ready', onReady);
+    (document.fonts?.ready ?? Promise.resolve()).then(() => {
+      fontsReady = true;
+      check();
+    });
+    timers.push(setTimeout(release, 6000));
     const refresh = () => ScrollTrigger.refresh();
     window.addEventListener('load', refresh, { once: true });
     return () => {
-      clearTimeout(t);
+      timers.forEach(clearTimeout);
+      window.removeEventListener('itara:hero-progress', onProgress);
+      window.removeEventListener('itara:hero-ready', onReady);
       window.removeEventListener('load', refresh);
     };
   }, [setReady]);
-  return null;
+
+  if (gone) return null;
+  return (
+    <div className={`loader${leaving ? ' is-leaving' : ''}`} aria-hidden="true">
+      <Image src="/img/mark.png" alt="" width={72} height={72} priority className="loader__mark" />
+      <span className="loader__bar"><i style={{ transform: `scaleX(${progress})` }} /></span>
+    </div>
+  );
 }
 
 /** Thin page-progress hairline. */

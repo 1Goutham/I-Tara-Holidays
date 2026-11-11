@@ -21,7 +21,7 @@ uniform float uDolly;       // extra depth-weighted push-in while scrolling
 uniform float uTime;
 uniform float uScroll;
 uniform float uIntro;
-uniform float uLayer;       // 0 = full frame, 1 = near layer + steam only
+uniform float uLayer;       // 0 = full frame, 1 = near landscape only, 2 = steam only
 uniform vec2  uSun;         // plate uv of the sun
 uniform vec2  uMugPx;       // mug rim, CSS px from the scene's top-left (follows its layer)
 uniform float uSteamUnit;   // CSS px per steam unit
@@ -63,8 +63,13 @@ void main() {
   s.y = 1.0 - s.y;
   vec2 cssPx = s * uRes / uDpr;
 
-  // near-layer pass: steam belongs to the mug layer, so it is evaluated in screen space
-  float steamA = uLayer > 0.5 ? steamAt(cssPx) : 0.0;
+  // steam pass: belongs to the mug, evaluated in screen space after the props are drawn
+  if (uLayer > 1.5) {
+    float st = steamAt(cssPx);
+    if (st < 0.003) discard;
+    gl_FragColor = vec4(vec3(1.0, 0.99, 0.97) * st, st);
+    return;
+  }
 
   vec2 base = (s - 0.5) * uVis;
   vec2 uv = uCenter + base / uZoom;
@@ -76,7 +81,7 @@ void main() {
   uv = clamp(uv, vec2(0.001), vec2(0.999));
   vec3 maps = texture2D(uDepth, uv).rgb;
   float near = smoothstep(0.22, 0.30, maps.r);
-  if (uLayer > 0.5 && near < 0.003 && steamA < 0.003) discard;
+  if (uLayer > 0.5 && near < 0.003) discard;
 
   vec3 col = texture2D(uImg, uv).rgb;
   float aspect = uImgRes.x / uImgRes.y;
@@ -109,9 +114,6 @@ void main() {
   col += (hash(gl_FragCoord.xy + fract(uTime) * 91.0) - 0.5) * 0.022;
 
   if (uLayer < 0.5) { gl_FragColor = vec4(col, 1.0); return; }
-  // premultiplied output: the near landscape, with steam composited over it
-  float a = near + steamA * (1.0 - near);
-  vec3 pm = col * near * (1.0 - steamA) + vec3(1.0, 0.99, 0.97) * steamA;
-  gl_FragColor = vec4(pm, a);
+  gl_FragColor = vec4(col * near, near);   // premultiplied near landscape
 }
 `;

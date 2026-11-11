@@ -2,59 +2,65 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
 import { coverFor, layerTransform, PLATE, plateToScreen, REST_ZOOM, SceneRenderer, type SceneState } from './renderer';
+import { FrontRenderer, type FrontFrame, type GrassPatch } from './front';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 export interface SceneHandle {
   state: SceneState;
 }
 
-const PLATE_SRC = '/img/hero/plate.webp';
-const DEPTH_SRC = '/img/hero/depth.webp';
-
-/*
- * Camp props are real cut-outs on their own layers (so they never warp).
- * Everything is placed in landscape-plate pixels; `d` is the layer's depth (0 far → 1 near).
- */
-type Item = {
-  kind: 'img' | 'glow' | 'shadow' | 'light';
-  x: number; y: number; w: number; h?: number;
-  src?: string; ratio?: number; cls?: string;
-  screen?: boolean; // anchored to the viewport (camera-side foreground) instead of the plate
+const SRC = {
+  plate: '/img/hero/plate.webp',
+  depth: '/img/hero/depth.webp',
+  stump: '/img/hero/stump.webp',
+  tent: '/img/hero/tent.webp',
+  grass: '/img/hero/grass.bin',
 };
-type Layer = { key: string; d: number; zone: 'back' | 'front'; items: Item[] };
 
-const TENT = '/img/hero/tent.webp';
-const STUMP = '/img/hero/stump.webp';
+/* ----------------------------------------------------------------------------
+ * Scene layout, in landscape-plate pixels. `d` = depth (0 far → 1 near, >1 camera-side).
+ * The tent and stump are drawn by WebGL (light wrap, rim light, grass around their bases);
+ * their DOM copies below are the no-WebGL fallback.
+ * -------------------------------------------------------------------------- */
+const STUMP = { x: 704, y: 648, w: 618, ratio: 1930 / 537, d: 0.8 };
+const TENT = { x: 1188, y: 275, w: 699, ratio: 1398 / 906, d: 0.72 };
+const SHADOWS = [
+  { x: 760, y: 768, w: 520, h: 44, d: 0.8, o: 0.55 },
+  { x: 1260, y: 682, w: 660, h: 52, d: 0.72, o: 0.5 },
+];
+const PATCHES: GrassPatch[] = [
+  // around the stump and its rocks: blades behind are drawn before it, blades in front after
+  { anchor: [1012, 768], scale: [330, 34, 24], width: 1.5, mirror: 1, d: 0.8, wind: 1.0, split: 'around' },
+  // along the tent's floor
+  { anchor: [1560, 712], scale: [380, 30, 18], width: 1.5, mirror: -1, d: 0.72, wind: 0.9, split: 'around' },
+  // the meadow nearer the camera: taller, wider blades
+  { anchor: [600, 836], scale: [440, 48, 42], width: 2.2, mirror: 1, d: 0.95, wind: 1.1, split: 'all' },
+  { anchor: [1240, 878], scale: [540, 60, 30], width: 2.6, mirror: -1, d: 1.05, wind: 1.2, split: 'all' },
+];
+const MUG: [number, number] = [1128, 654];
+const STEAM_UNIT = 44;
+
+type Item = { kind: 'img' | 'glow' | 'shadow'; x: number; y: number; w: number; h?: number; src?: string; ratio?: number; cls?: string; screen?: boolean };
+type Layer = { key: string; d: number; zone: 'back' | 'front'; items: Item[] };
 const LAYERS: Layer[] = [
-  // the sun sits behind the headline and only ever adds light (screen blend)
   { key: 'sun', d: 0.0, zone: 'back', items: [{ kind: 'img', src: '/img/hero/sun.webp', x: 830, y: 311, w: 897, ratio: 2000 / 512, cls: 'scene__sun' }] },
+  { key: 'stump', d: STUMP.d, zone: 'front', items: [{ kind: 'shadow', x: 760, y: 768, w: 520, h: 44 }, { kind: 'img', src: SRC.stump, ...STUMP, cls: 'scene__fallback' }] },
   {
-    key: 'stump', d: 0.8, zone: 'front',
+    key: 'tent', d: TENT.d, zone: 'front',
     items: [
-      { kind: 'shadow', x: 760, y: 790, w: 520, h: 36 },
-      { kind: 'img', src: STUMP, x: 704, y: 648, w: 618, ratio: 1930 / 537 },
-      { kind: 'light', src: STUMP, x: 704, y: 648, w: 618, ratio: 1930 / 537, cls: 'scene__light scene__light--stump' },
-    ],
-  },
-  {
-    key: 'tent', d: 0.72, zone: 'front',
-    items: [
-      { kind: 'shadow', x: 1300, y: 684, w: 620, h: 44 },
-      { kind: 'img', src: TENT, x: 1188, y: 275, w: 699, ratio: 1398 / 906 },
-      { kind: 'light', src: TENT, x: 1188, y: 275, w: 699, ratio: 1398 / 906, cls: 'scene__light scene__light--tent' },
+      { kind: 'shadow', x: 1260, y: 682, w: 660, h: 52 },
+      { kind: 'img', src: SRC.tent, ...TENT, cls: 'scene__fallback' },
       { kind: 'glow', x: 1405 - 70, y: 402 - 70, w: 140, h: 140, cls: 'glow glow--lantern' },
       { kind: 'glow', x: 1617 - 55, y: 582 - 55, w: 110, h: 110, cls: 'glow glow--inner' },
     ],
   },
-  // out-of-focus foreground: the nearest planes, strongest parallax
   { key: 'bushes', d: 1.3, zone: 'front', items: [{ kind: 'img', src: '/img/hero/bushes.webp', x: 0, y: 0, w: 1, ratio: 2000 / 632, cls: 'scene__bushes', screen: true }] },
   { key: 'branch', d: 1.15, zone: 'front', items: [{ kind: 'img', src: '/img/hero/branch.webp', x: 1330, y: -70, w: 600, ratio: 1309 / 952, cls: 'scene__branch' }] },
 ];
-const MUG: [number, number] = [1128, 654]; // rim centre, on the stump layer
-const MUG_D = 0.8;
-const STEAM_UNIT = 44; // plate px
 
-function load(src: string) {
+const emit = (name: string, detail?: unknown) => window.dispatchEvent(new CustomEvent(name, { detail }));
+
+function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.decoding = 'async';
@@ -64,10 +70,25 @@ function load(src: string) {
   });
 }
 
-/**
- * Photographic hero: a WebGL landscape (depth parallax, fog, sun, steam) with crisp prop layers.
- * Back canvas → headline → near-hills canvas (+ steam) → prop layers.
- */
+/** A small, softened copy of the landscape: the "light around" props and grass sample it. */
+function blurred(img: HTMLImageElement) {
+  const c = document.createElement('canvas');
+  c.width = 192;
+  c.height = 98;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+/** Screen rect of a plate rect on a layer at depth d, after the camera move. */
+function rectFor(s: SceneState, x: number, y: number, w: number, h: number, d: number, W: number, H: number): [number, number, number, number] {
+  const k = coverFor(W, H).scale * REST_ZOOM;
+  const [sx, sy] = plateToScreen(x, y, W, H);
+  const t = layerTransform(s, d, W, H);
+  return [W / 2 + (sx - W / 2) * t.m + t.tx, H / 2 + (sy - H / 2) * t.m + t.ty, w * k * t.m, h * k * t.m];
+}
+
 export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(function HeroScene({ children }, ref) {
   const wrap = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLCanvasElement>(null);
@@ -79,7 +100,7 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
 
   useImperativeHandle(ref, () => ({ state: state.current }), []);
 
-  // place every item for the current viewport; keep the fallback image cropped like the shader
+  // DOM placement (fallback props, glows, sun, branch) + headline ridge line
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
@@ -116,10 +137,12 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     if (!el || !back.current || !front.current) return;
     let disposed = false;
     let raf = 0;
-    let renderers: SceneRenderer[] = [];
+    let backR: SceneRenderer | null = null;
+    let frontR: FrontRenderer | null = null;
     const reduce = prefersReducedMotion();
     const fine = hasFinePointer();
     const target = [0, 0];
+    const pointer: [number, number] = [-9999, -9999];
     let visible = true;
     let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
@@ -127,31 +150,47 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       const w = el.clientWidth;
       const h = el.clientHeight;
       const d = Math.min(dpr, 2400 / Math.max(w, 1));
-      renderers.forEach((r) => r.resize(w, h, d));
+      backR?.resize(w, h, d);
+      frontR?.resize(w, h, d);
     };
 
     const frame = () => {
       const s = state.current;
-      const w = el.clientWidth;
-      const h = el.clientHeight;
-      // prop layers: same projection as the shader, applied as one compositor transform each
+      const W = el.clientWidth;
+      const H = el.clientHeight;
       LAYERS.forEach((L, i) => {
         const node = layerEls.current[i];
         if (!node) return;
-        const t = layerTransform(s, L.d, w, h);
+        const t = layerTransform(s, L.d, W, H);
         node.style.transform = `translate3d(${t.tx.toFixed(2)}px, ${t.ty.toFixed(2)}px, 0) scale(${t.m.toFixed(5)})`;
       });
-      // steam follows the mug's projected position
-      const t = layerTransform(s, MUG_D, w, h);
-      const [rx, ry] = plateToScreen(MUG[0], MUG[1], w, h);
-      const mug: [number, number] = [w / 2 + (rx - w / 2) * t.m + t.tx, h / 2 + (ry - h / 2) * t.m + t.ty];
-      const unit = STEAM_UNIT * coverFor(w, h).scale * REST_ZOOM * t.m;
-      renderers.forEach((r) => r.render(s, mug, unit));
+      const t = layerTransform(s, STUMP.d, W, H);
+      const [rx, ry] = plateToScreen(MUG[0], MUG[1], W, H);
+      const mug: [number, number] = [W / 2 + (rx - W / 2) * t.m + t.tx, H / 2 + (ry - H / 2) * t.m + t.ty];
+      const steamUnit = STEAM_UNIT * coverFor(W, H).scale * REST_ZOOM * t.m;
+      backR?.render(s, mug, steamUnit);
+      if (frontR) {
+        const f: FrontFrame = {
+          props: [
+            { tex: 'stump', rect: rectFor(s, STUMP.x, STUMP.y, STUMP.w, STUMP.w / STUMP.ratio, STUMP.d, W, H) },
+            { tex: 'tent', rect: rectFor(s, TENT.x, TENT.y, TENT.w, TENT.w / TENT.ratio, TENT.d, W, H) },
+          ],
+          shadows: SHADOWS.map((sh) => ({ rect: rectFor(s, sh.x, sh.y, sh.w, sh.h, sh.d, W, H), opacity: sh.o })),
+          patches: PATCHES,
+          mug,
+          steamUnit,
+          pointer: fine ? pointer : [-9999, -9999],
+        };
+        frontR.render(s, f);
+      }
     };
 
     const onMove = (e: PointerEvent) => {
       target[0] = (e.clientX / window.innerWidth) * 2 - 1;
       target[1] = (e.clientY / window.innerHeight) * 2 - 1;
+      const r = el.getBoundingClientRect();
+      pointer[0] = e.clientX - r.left;
+      pointer[1] = e.clientY - r.top;
     };
 
     let last = performance.now();
@@ -196,17 +235,34 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     };
 
     (async () => {
+      // report progress to the loader
+      let done = 0;
+      const total = 5;
+      const track = <T,>(p: Promise<T>) => p.then((v) => (emit('itara:hero-progress', ++done / total), v));
       try {
-        const [img, depth] = await Promise.all([load(PLATE_SRC), load(DEPTH_SRC)]);
+        const [img, depth, stump, tent, grass] = await Promise.all([
+          track(loadImage(SRC.plate)),
+          track(loadImage(SRC.depth)),
+          track(loadImage(SRC.stump)),
+          track(loadImage(SRC.tent)),
+          track(fetch(SRC.grass).then((r) => r.arrayBuffer())),
+        ]);
         if (disposed) return;
-        renderers = [new SceneRenderer(back.current!, img, depth, 0), new SceneRenderer(front.current!, img, depth, 1)];
+        backR = new SceneRenderer(back.current!, img, depth, 0);
+        try {
+          frontR = new FrontRenderer(front.current!, { plate: img, depth, blur: blurred(img), stump, tent }, grass);
+        } catch (e) {
+          console.warn('[hero] front compositor unavailable', e);
+        }
         size();
         if (reduce) state.current.intro = 1;
         frame();
         el.classList.add('is-live');
-      } catch {
-        // static plate + prop layers remain
+        if (frontR) el.classList.add('is-composited');
+      } catch (e) {
+        console.warn('[hero] WebGL unavailable, showing the static scene', e);
       }
+      emit('itara:hero-ready');
       start();
     })();
 
@@ -228,7 +284,8 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pointermove', onMove);
-      renderers.forEach((r) => r.dispose());
+      backR?.dispose();
+      frontR?.dispose();
     };
   }, []);
 
@@ -243,10 +300,6 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
             // eslint-disable-next-line @next/next/no-img-element -- pre-optimised cut-out with alpha
             return <img key={j} data-item={it.screen ? undefined : data} src={it.src} alt="" className={`scene__prop ${it.cls ?? ''}`} decoding="async" />;
           }
-          if (it.kind === 'light') {
-            const m = `url(${it.src})`;
-            return <span key={j} data-item={data} className={it.cls} style={{ WebkitMaskImage: m, maskImage: m }} />;
-          }
           return <span key={j} data-item={data} className={it.kind === 'shadow' ? 'scene__shadow' : it.cls} />;
         })}
       </div>
@@ -259,7 +312,7 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       <img
         ref={plate}
         className="scene__plate"
-        src={PLATE_SRC}
+        src={SRC.plate}
         alt="Dawn over misty forested hills, with a canvas tent, lantern, camp chair and a steaming mug on a tree stump"
         fetchPriority="high"
         decoding="async"

@@ -43,10 +43,19 @@ public/img/hero/       plate.webp + depth.webp (landscape), sun/tent/stump/bushe
 ```
 
 ### Hero scene
-- **Landscape:** `public/img/hero/plate.webp`, rendered by `components/hero-gl/shader.ts` with depth parallax, fog, sun shafts and grade. It reads `depth.webp`: R = sharp depth for headline occlusion, G = fog mask, B = smooth depth for parallax.
-- **Layers:** `sun.webp` (screen-blended, behind the headline), `tent.webp`, `stump.webp`, `bushes.webp` (defocused foreground, anchored to the viewport) and `branch.webp` (swaying) are real cut-outs on their own DOM layers, so they never warp. Warm scene light is painted onto the props through CSS masks of their own silhouettes. Their positions and depths live in `LAYERS` in `components/hero-gl/hero-scene.tsx`, in landscape-plate pixels. They move with the same camera maths as the shader (`camera()` and `layerTransform()` in `renderer.ts`).
-- **Steam:** drawn in the near-layer pass and tracks the mug's live position. Lantern glows are CSS layers with flicker.
-- **Fallbacks:** without WebGL, or with reduced motion, the static plate and prop layers are shown.
+Two canvases share one camera (`camera()` and `layerTransform()` in `components/hero-gl/renderer.ts`):
+
+- **Back canvas** (`shader.ts`): renders the landscape plate with depth parallax, fog, sun shafts and grade.
+- **Front canvas** (`front.ts` + `composite.ts`), drawn in this order:
+  1. The near hills that pass in front of the headline.
+  2. Contact shadows.
+  3. 3D grass behind each prop.
+  4. The tent and stump cut-outs, with light wrap, sun rim light, grade and haze.
+  5. 3D grass in front of the props and across the meadow.
+  6. Mug steam.
+- **Grass:** `public/img/hero/grass.bin` is a 3,000-blade fur patch converted from the supplied OBJ (Int16 blade centrelines). It's reused for several patches; each blade takes the meadow colour beneath it and sways in the wind, leaning away from the pointer.
+- **DOM layers:** sun (screen-blended), branch (swaying), bushes (defocused foreground) and lantern glows. DOM copies of the tent and stump are the fallback when WebGL is unavailable.
+- **Loader:** a minimal logo loader waits for fonts and the hero assets (at most 6 s).
 
 ### Motion conventions
 Add these attributes to markup and `components/motion/reveals.tsx` animates them:
