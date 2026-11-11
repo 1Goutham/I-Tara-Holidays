@@ -26,8 +26,8 @@ export function Hero() {
         scrollTrigger: { trigger: root.current, start: 'top top', end: '+=100%', scrub: 1, pin: '.hero__pin' },
       })
         .to(proxy, { p: 1, duration: 1, onUpdate: () => scene.current && (scene.current.state.scroll = proxy.p) }, 0)
-        .to(q('.hero__title'), { yPercent: -38, autoAlpha: 0, duration: 0.6, ease: 'power1.in' }, 0)
-        .to(q('.hero__bottom'), { autoAlpha: 0, y: 20, duration: 0.3 }, 0)
+        .fromTo(q('.hero__title'), { filter: 'blur(0px)' }, { yPercent: -38, autoAlpha: 0, filter: 'blur(18px)', duration: 0.6, ease: 'power1.in' }, 0)
+        .fromTo(q('.hero__bottom'), { filter: 'blur(0px)' }, { autoAlpha: 0, y: 20, filter: 'blur(8px)', duration: 0.3 }, 0)
         .to(q('.hero__shade'), { autoAlpha: 1, duration: 0.4, ease: 'power1.in' }, 0.6);
     },
     { scope: root },
