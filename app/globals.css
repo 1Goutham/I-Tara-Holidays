@@ -163,14 +163,16 @@ body.is-loading { overflow: hidden; }
 /* ---------- Header ---------- */
 .header { position: fixed; inset: 0 0 auto; z-index: 200; transform: translateZ(0); will-change: transform; transition: transform 0.9s var(--ease), background 0.5s, color 0.5s; }
 .header.is-hidden { transform: translate3d(0, -100%, 0); }
-.header__bar { display: flex; align-items: center; justify-content: space-between; gap: 30px; height: 82px; padding-inline: var(--gutter); max-width: 1600px; margin: 0 auto; }
+.header__bar { display: flex; align-items: center; justify-content: space-between; gap: 30px; height: 108px; padding-inline: var(--gutter); max-width: 1600px; margin: 0 auto; transition: height 0.7s var(--ease); }
+.header.is-solid .header__bar { height: 84px; }
 .header::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line); opacity: 0; transition: opacity 0.5s; }
-.header.is-solid { background: rgba(246, 242, 234, 0.97); }
+.header.is-solid { background: #f6f2ea; }
 .header.is-solid::after { opacity: 1; }
 .header.is-dark { color: var(--cream); }
-.header.is-dark.is-solid { background: rgba(6, 38, 25, 0.97); }
+.header.is-dark.is-solid { background: #062619; }
 .header.is-dark::after { background: var(--line-light); }
-.brand { position: relative; display: block; width: 132px; flex: none; }
+.brand { position: relative; display: block; width: 100px; flex: none; transition: width 0.7s var(--ease); }
+.header.is-solid .brand { width: 80px; }
 .brand img { width: 100%; height: auto; transition: opacity 0.5s; }
 .brand__light { position: absolute; inset: 0; opacity: 0; }
 .header.is-dark .brand__dark { opacity: 0; }
@@ -539,8 +541,10 @@ body.is-scrolled .wa { transform: scale(1); }
 }
 @media (max-width: 640px) {
   body { font-size: 15px; }
-  .header__bar { height: 68px; }
-  .brand { width: 112px; }
+  .header__bar { height: 78px; }
+  .header.is-solid .header__bar { height: 66px; }
+  .brand { width: 74px; }
+  .header.is-solid .brand { width: 56px; }
   .hero__bottom { grid-template-columns: 1fr auto; }
   .hero__bottom > :last-child { display: none; }
   .hero__bottom p { font-size: 0.85rem; }
