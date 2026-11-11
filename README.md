@@ -29,7 +29,9 @@ app/
 components/
   motion/              smooth-scroll.tsx (Lenis synced to the GSAP ticker), reveals.tsx (data-attribute reveals)
   effects.tsx          counter preloader, progress hairline, context cursor, magnetic buttons, grain
-  illustrations.tsx    layered dawn landscape + gold line-art panorama
+  hero-gl/             WebGL hero: depth-parallax plate with fog, sun shafts, mug steam,
+                       lantern/fire flicker and leaf sway in one shader (no 3D library)
+  illustrations.tsx    gold line-art panorama
   sections/            hero (pinned parallax), intro, journeys (pinned horizontal), experiences,
                        panorama, destinations, flow (scroll-drawn route), services, stories, contact, footer
 lib/
@@ -37,7 +39,14 @@ lib/
   gsap.ts              GSAP + ScrollTrigger + SplitText registration, Lenis handle, scrollToId
   site.ts · data.ts    brand/contact details · content
 public/img/            logo mark and wordmarks (dark + light)
+public/img/hero/       plate.webp (colour) + depth.png (R depth, G fog mask, B foliage mask)
 ```
+
+### Hero scene
+The hero is one photograph plus a packed depth map, rendered by `components/hero-gl/shader.ts`.
+To swap the photo, export the new plate at the same size, rebuild the depth map, and update the
+sun, mug, lantern and fire positions and the `ridge` line in `components/hero-gl/renderer.ts`.
+If WebGL is unavailable, or the visitor prefers reduced motion, the static plate is shown instead.
 
 ### Motion conventions
 Add these attributes to markup and `components/motion/reveals.tsx` animates them:
