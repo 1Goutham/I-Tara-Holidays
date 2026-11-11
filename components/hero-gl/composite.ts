@@ -23,7 +23,7 @@ uniform vec2  uCenter;      // plate uv at screen centre
 uniform vec2  uVis;
 uniform float uZoom;
 uniform vec2  uSunPx;       // sun position, CSS px
-uniform float uMode;        // 0 = prop, 1 = contact shadow, 2 = grass strip (wind + feathered ends)
+uniform float uMode;        // 0 = prop, 1 = contact shadow, 2 = grass strip, 3 = distant mountains
 uniform float uTime;
 uniform float uSeed;
 uniform float uWrap;        // light-wrap strength
@@ -43,7 +43,7 @@ void main() {
   }
   vec2 uv = vUv;
   float feather = 1.0;
-  if (uMode > 1.5) {
+  if (abs(uMode - 2.0) < 0.5) {
     // wind: a gust travelling along the strip; tips move, roots stay planted (v = 0 is the top)
     float tip = pow(1.0 - uv.y, 2.2);
     float gust = sin(uv.x * 9.0 - uTime * 1.6 + uSeed) * 0.6 + sin(uv.x * 23.0 - uTime * 2.7 + uSeed * 2.0) * 0.25 + sin(uTime * 0.5 + uSeed) * 0.4;
@@ -52,6 +52,12 @@ void main() {
     feather = smoothstep(0.0, 0.09, vUv.x) * smoothstep(1.0, 0.91, vUv.x) * smoothstep(1.0, 0.86, vUv.y);
   }
   vec4 c = texture2D(uTex, uv) * feather;
+  if (uMode > 2.5) {
+    // distance softens the ridgeline: a small blur of the silhouette
+    vec2 q = 1.6 / uRect.zw;
+    c = (c * 2.0 + texture2D(uTex, uv + vec2(q.x, 0.0)) + texture2D(uTex, uv - vec2(q.x, 0.0))
+         + texture2D(uTex, uv + vec2(0.0, q.y)) + texture2D(uTex, uv - vec2(0.0, q.y))) / 6.0;
+  }
   if (c.a < 0.003) discard;
   vec3 col = c.rgb / c.a * uShade;
 
@@ -73,6 +79,13 @@ void main() {
   // grade into the plate: warm dawn balance, a breath of atmospheric haze
   col = mix(col, col * vec3(1.05, 1.0, 0.9), 0.7);
   col = mix(col, bg, uHaze);
+  if (uMode > 2.5) {
+    // atmospheric perspective: the far ridges (top of the band) dissolve into the sky light
+    float far = 1.0 - smoothstep(0.12, 0.85, vUv.y);
+    float l = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(l), 0.18);                          // a little less saturated
+    col = mix(col, bg * vec3(0.97, 1.0, 1.04), 0.16 + far * 0.38);
+  }
   // light wrap: the bright background bleeds around the silhouette
   col = col + (1.0 - col) * bg * wrap * uWrap;
   // backlight: edges facing the sun catch a warm rim

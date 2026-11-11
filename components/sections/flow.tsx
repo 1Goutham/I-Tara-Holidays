@@ -76,7 +76,7 @@ export function Flow() {
     <section className="flow section" id="how" ref={root} data-theme="light">
       <div className="container">
         <div className="head head--center">
-          <p className="label" data-fade>(05) How it works</p>
+          <p className="label" data-fade>How it works</p>
           <h2 className="h2" data-split>From first idea to <em>finished</em> itinerary.</h2>
         </div>
 

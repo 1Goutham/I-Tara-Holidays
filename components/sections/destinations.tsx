@@ -23,7 +23,7 @@ export function Destinations() {
       <div className="container">
         <div className="head head--split">
           <div>
-            <p className="label" data-fade>(04) Destinations</p>
+            <p className="label" data-fade>Destinations</p>
             <h2 className="h2" data-split>Where will your next story <em>begin?</em></h2>
           </div>
           <p className="head__aside" data-fade>From island escapes to cool mountain towns. Choose a place and we will plan everything else.</p>

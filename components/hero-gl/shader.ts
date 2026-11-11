@@ -21,7 +21,7 @@ uniform float uDolly;       // extra depth-weighted push-in while scrolling
 uniform float uTime;
 uniform float uScroll;
 uniform float uIntro;
-uniform float uLayer;       // 0 = full frame, 1 = near landscape only, 2 = steam only
+uniform float uLayer;       // 0 = full frame, 1 = near landscape only, 2 = steam only, 3 = valley fog only
 uniform vec2  uSun;         // plate uv of the sun
 uniform vec2  uMugPx;       // mug rim, CSS px from the scene's top-left (follows its layer)
 uniform float uSteamUnit;   // CSS px per steam unit
@@ -64,7 +64,7 @@ void main() {
   vec2 cssPx = s * uRes / uDpr;
 
   // steam pass: belongs to the mug, evaluated in screen space after the props are drawn
-  if (uLayer > 1.5) {
+  if (abs(uLayer - 2.0) < 0.5) {
     float st = steamAt(cssPx);
     if (st < 0.003) discard;
     gl_FragColor = vec4(vec3(1.0, 0.99, 0.97) * st, st);
@@ -81,6 +81,22 @@ void main() {
   uv = clamp(uv, vec2(0.001), vec2(0.999));
   vec3 maps = texture2D(uDepth, uv).rgb;
   float near = smoothstep(0.22, 0.30, maps.r);
+
+  // fog pass: drifting sheets laid over the mountain band so it sits inside the haze
+  if (uLayer > 2.5) {
+    float asp = uImgRes.x / uImgRes.y;
+    vec2 fp = vec2(uv.x * asp, uv.y);
+    float band = smoothstep(0.50, 0.60, uv.y) * (1.0 - smoothstep(0.80, 0.93, uv.y));
+    float g1 = fbm(fp * vec2(1.6, 6.0) + vec2(uTime * 0.012, 0.0) + uPar * 3.0);
+    float g2 = fbm(fp * vec2(3.2, 10.0) - vec2(uTime * 0.022, uTime * 0.003) - uPar * 6.0 + 3.1);
+    float sh = smoothstep(0.45, 0.82, g1) * 0.7 + smoothstep(0.52, 0.86, g2) * 0.5;
+    float fa = clamp(sh * band * (0.6 + uScroll * 0.8 + (1.0 - uIntro) * 0.8), 0.0, 0.85) * 0.6;
+    if (fa < 0.003) discard;
+    vec2 sv0 = (uv - uSun) * vec2(asp, 1.0);
+    vec3 fc = mix(vec3(0.95, 0.95, 0.94), vec3(1.0, 0.91, 0.78), exp(-length(sv0) * 2.2));
+    gl_FragColor = vec4(fc * fa, fa);
+    return;
+  }
   if (uLayer > 0.5 && near < 0.003) discard;
 
   vec3 col = texture2D(uImg, uv).rgb;

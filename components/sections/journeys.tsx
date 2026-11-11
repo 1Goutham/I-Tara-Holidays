@@ -76,7 +76,7 @@ export function Journeys() {
       <div className="journeys__inner">
         <div className="container journeys__head">
           <div>
-            <p className="label" data-fade>(02) Signature journeys</p>
+            <p className="label" data-fade>Signature journeys</p>
             <h2 className="h2" data-split>Holidays planned to the <em>last</em> detail.</h2>
           </div>
           <div className="tabs" data-fade role="tablist" aria-label="Filter journeys">

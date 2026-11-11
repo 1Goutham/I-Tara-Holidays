@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Instrument_Serif, Inter_Tight } from 'next/font/google';
+import { Cormorant, Jost } from 'next/font/google';
 import { site } from '@/lib/site';
 import './globals.css';
 
-const display = Instrument_Serif({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
-const body = Inter_Tight({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
+const display = Cormorant({ subsets: ['latin'], weight: ['300', '400', '500'], style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
+const body = Jost({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-body', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

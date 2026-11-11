@@ -45,7 +45,7 @@ export function Stories() {
   return (
     <section className="stories section" id="stories" data-theme="light">
       <div className="container stories__grid">
-        <p className="label" data-fade>(07) Traveller stories</p>
+        <p className="label" data-fade>Traveller stories</p>
         <figure className="stories__fig" data-fade onMouseEnter={() => clearInterval(timer.current)} onMouseLeave={start}>
           <blockquote ref={quote} key={index}>“{t.quote}”</blockquote>
           <figcaption>

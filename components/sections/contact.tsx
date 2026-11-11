@@ -63,7 +63,7 @@ export function Contact() {
     <section className="contact" id="contact" data-theme="dark">
       <div className="container contact__grid">
         <div className="contact__copy">
-          <p className="label" data-fade>(08) Begin</p>
+          <p className="label" data-fade>Begin</p>
           <h2 className="h2" data-split>Tell us where you would like to <em>wake up.</em></h2>
           <p className="contact__lead" data-fade>
             Share a few details and a travel specialist will send a personalised, fully priced itinerary within 24 hours. There is no cost and no obligation.

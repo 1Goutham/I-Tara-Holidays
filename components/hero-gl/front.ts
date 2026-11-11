@@ -151,8 +151,10 @@ export class FrontRenderer {
     // 1 · mountain band (passes in front of the headline), hazed by distance
     this.useSprite(W, H, vis, center, cam.zoom, sunPx);
     gl.uniform1f(this.sprite.u.uTime, s.time);
-    for (const d of f.backdrop) this.drawSprite(this.tex[d.tex], d.rect, { mode: 0, opacity: 1, wrap: 0.45, rim: 0.35, haze: 0.14, shade: 1 });
+    for (const d of f.backdrop) this.drawSprite(this.tex[d.tex], d.rect, { mode: 3, opacity: 1, wrap: 0.5, rim: 0.25, haze: 0.0, shade: 1 });
     gl.disableVertexAttribArray(this.sprite.a.aCorner);
+    // valley fog drifting over the mountain band
+    this.landPass(s, 3, f);
 
     // 2 · near meadow from the plate, over the mountain band's lower edge
     this.landPass(s, 1, f);

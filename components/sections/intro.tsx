@@ -5,7 +5,7 @@ export function Intro() {
     <section className="intro" id="about" data-theme="dark">
       <div className="container">
         <div className="intro__grid">
-          <p className="label" data-fade>(01) The I Tara way</p>
+          <p className="label" data-fade>The I Tara way</p>
           <div>
             <p className="intro__lead" data-split>
               In Himalayan tradition, Tara watches over every traveller. We took her name because it describes the work: plan with care, carry the worry, and leave you free to simply <em>arrive.</em>

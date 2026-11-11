@@ -33,7 +33,7 @@ export function Experiences() {
     <section className="exp section" id="experiences" data-theme="light">
       <div className="container">
         <div className="head">
-          <p className="label" data-fade>(03) Ways to travel</p>
+          <p className="label" data-fade>Ways to travel</p>
           <h2 className="h2" data-split>Choose the kind of journey you want to <em>remember.</em></h2>
         </div>
 
