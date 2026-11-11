@@ -15,28 +15,42 @@ const DEPTH_SRC = '/img/hero/depth.webp';
  * Camp props are real cut-outs on their own layers (so they never warp).
  * Everything is placed in landscape-plate pixels; `d` is the layer's depth (0 far → 1 near).
  */
-type Item = { kind: 'img' | 'glow' | 'shadow'; x: number; y: number; w: number; h?: number; src?: string; ratio?: number; cls?: string };
-const LAYERS: { key: string; d: number; items: Item[] }[] = [
+type Item = {
+  kind: 'img' | 'glow' | 'shadow' | 'light';
+  x: number; y: number; w: number; h?: number;
+  src?: string; ratio?: number; cls?: string;
+  screen?: boolean; // anchored to the viewport (camera-side foreground) instead of the plate
+};
+type Layer = { key: string; d: number; zone: 'back' | 'front'; items: Item[] };
+
+const TENT = '/img/hero/tent.webp';
+const STUMP = '/img/hero/stump.webp';
+const LAYERS: Layer[] = [
+  // the sun sits behind the headline and only ever adds light (screen blend)
+  { key: 'sun', d: 0.0, zone: 'back', items: [{ kind: 'img', src: '/img/hero/sun.webp', x: 830, y: 311, w: 897, ratio: 2000 / 512, cls: 'scene__sun' }] },
   {
-    key: 'stump',
-    d: 0.8,
+    key: 'stump', d: 0.8, zone: 'front',
     items: [
-      { kind: 'shadow', x: 760, y: 728, w: 520, h: 36 },
-      { kind: 'img', src: '/img/hero/stump.webp', x: 704, y: 588, w: 618, ratio: 1930 / 537 },
+      { kind: 'shadow', x: 760, y: 790, w: 520, h: 36 },
+      { kind: 'img', src: STUMP, x: 704, y: 648, w: 618, ratio: 1930 / 537 },
+      { kind: 'light', src: STUMP, x: 704, y: 648, w: 618, ratio: 1930 / 537, cls: 'scene__light scene__light--stump' },
     ],
   },
   {
-    key: 'tent',
-    d: 0.72,
+    key: 'tent', d: 0.72, zone: 'front',
     items: [
       { kind: 'shadow', x: 1300, y: 684, w: 620, h: 44 },
-      { kind: 'img', src: '/img/hero/tent.webp', x: 1188, y: 275, w: 699, ratio: 1398 / 906 },
+      { kind: 'img', src: TENT, x: 1188, y: 275, w: 699, ratio: 1398 / 906 },
+      { kind: 'light', src: TENT, x: 1188, y: 275, w: 699, ratio: 1398 / 906, cls: 'scene__light scene__light--tent' },
       { kind: 'glow', x: 1405 - 70, y: 402 - 70, w: 140, h: 140, cls: 'glow glow--lantern' },
       { kind: 'glow', x: 1617 - 55, y: 582 - 55, w: 110, h: 110, cls: 'glow glow--inner' },
     ],
   },
+  // out-of-focus foreground: the nearest planes, strongest parallax
+  { key: 'bushes', d: 1.3, zone: 'front', items: [{ kind: 'img', src: '/img/hero/bushes.webp', x: 0, y: 0, w: 1, ratio: 2000 / 632, cls: 'scene__bushes', screen: true }] },
+  { key: 'branch', d: 1.15, zone: 'front', items: [{ kind: 'img', src: '/img/hero/branch.webp', x: 1330, y: -70, w: 600, ratio: 1309 / 952, cls: 'scene__branch' }] },
 ];
-const MUG: [number, number] = [1128, 594]; // rim centre, on the stump layer
+const MUG: [number, number] = [1128, 654]; // rim centre, on the stump layer
 const MUG_D = 0.8;
 const STEAM_UNIT = 44; // plate px
 
@@ -218,6 +232,27 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     };
   }, []);
 
+  const renderLayer = (L: Layer) => {
+    const i = LAYERS.indexOf(L);
+    return (
+      <div key={L.key} className={`scene__layer scene__layer--${L.key}`} ref={(n) => { layerEls.current[i] = n; }} aria-hidden="true">
+        {L.items.map((it, j) => {
+          const h = it.h ?? it.w / (it.ratio ?? 1);
+          const data = `${it.x},${it.y},${it.w},${h}`;
+          if (it.kind === 'img') {
+            // eslint-disable-next-line @next/next/no-img-element -- pre-optimised cut-out with alpha
+            return <img key={j} data-item={it.screen ? undefined : data} src={it.src} alt="" className={`scene__prop ${it.cls ?? ''}`} decoding="async" />;
+          }
+          if (it.kind === 'light') {
+            const m = `url(${it.src})`;
+            return <span key={j} data-item={data} className={it.cls} style={{ WebkitMaskImage: m, maskImage: m }} />;
+          }
+          return <span key={j} data-item={data} className={it.kind === 'shadow' ? 'scene__shadow' : it.cls} />;
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="scene" ref={wrap}>
       {/* eslint-disable-next-line @next/next/no-img-element -- same file the shader samples, so it downloads once */}
@@ -230,21 +265,10 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
         decoding="async"
       />
       <canvas className="scene__gl scene__gl--back" ref={back} aria-hidden="true" />
+      {LAYERS.filter((L) => L.zone === 'back').map(renderLayer)}
       {children}
       <canvas className="scene__gl scene__gl--front" ref={front} aria-hidden="true" />
-      {LAYERS.map((L, i) => (
-        <div key={L.key} className={`scene__layer scene__layer--${L.key}`} ref={(n) => { layerEls.current[i] = n; }} aria-hidden="true">
-          {L.items.map((it, j) => {
-            const h = it.h ?? it.w / (it.ratio ?? 1);
-            const data = `${it.x},${it.y},${it.w},${h}`;
-            if (it.kind === 'img') {
-              // eslint-disable-next-line @next/next/no-img-element -- pre-optimised cut-out with alpha
-              return <img key={j} data-item={data} src={it.src} alt="" className="scene__prop" decoding="async" fetchPriority="high" />;
-            }
-            return <span key={j} data-item={data} className={it.kind === 'shadow' ? 'scene__shadow' : it.cls} />;
-          })}
-        </div>
-      ))}
+      {LAYERS.filter((L) => L.zone === 'front').map(renderLayer)}
     </div>
   );
 });

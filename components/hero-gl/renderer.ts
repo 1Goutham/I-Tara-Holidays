@@ -11,7 +11,7 @@ export interface SceneState {
 export const PLATE = {
   w: 1755,
   h: 896,
-  sun: [1215, 408] as [number, number],
+  sun: [1222, 417] as [number, number],
   ridge: 0.632, // plate y where the near hills begin (the headline tucks behind it)
 };
 

@@ -39,12 +39,12 @@ lib/
   gsap.ts              GSAP + ScrollTrigger + SplitText registration, Lenis handle, scrollToId
   site.ts · data.ts    brand/contact details · content
 public/img/            logo mark and wordmarks (dark + light)
-public/img/hero/       plate.webp + depth.webp (landscape), tent.webp + stump.webp (cut-out props)
+public/img/hero/       plate.webp + depth.webp (landscape), sun/tent/stump/bushes/branch.webp (cut-out layers)
 ```
 
 ### Hero scene
 - **Landscape:** `public/img/hero/plate.webp`, rendered by `components/hero-gl/shader.ts` with depth parallax, fog, sun shafts and grade. It reads `depth.webp`: R = sharp depth for headline occlusion, G = fog mask, B = smooth depth for parallax.
-- **Camp props:** `tent.webp` and `stump.webp` are real cut-outs on their own DOM layers, so they never warp. Their positions and depths live in `LAYERS` in `components/hero-gl/hero-scene.tsx`, in landscape-plate pixels. They move with the same camera maths as the shader (`camera()` and `layerTransform()` in `renderer.ts`).
+- **Layers:** `sun.webp` (screen-blended, behind the headline), `tent.webp`, `stump.webp`, `bushes.webp` (defocused foreground, anchored to the viewport) and `branch.webp` (swaying) are real cut-outs on their own DOM layers, so they never warp. Warm scene light is painted onto the props through CSS masks of their own silhouettes. Their positions and depths live in `LAYERS` in `components/hero-gl/hero-scene.tsx`, in landscape-plate pixels. They move with the same camera maths as the shader (`camera()` and `layerTransform()` in `renderer.ts`).
 - **Steam:** drawn in the near-layer pass and tracks the mug's live position. Lantern glows are CSS layers with flicker.
 - **Fallbacks:** without WebGL, or with reduced motion, the static plate and prop layers are shown.
 
