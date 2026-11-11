@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Bodoni_Moda, Jost } from 'next/font/google';
+import { DM_Serif_Display, Jost } from 'next/font/google';
 import { site } from '@/lib/site';
 import './globals.css';
 
-const display = Bodoni_Moda({ subsets: ['latin'], weight: 'variable', style: ['normal', 'italic'], axes: ['opsz'], variable: '--font-display', display: 'swap' });
+const display = DM_Serif_Display({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
 const body = Jost({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-body', display: 'swap' });
 
 export const metadata: Metadata = {
