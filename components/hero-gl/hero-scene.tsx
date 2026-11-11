@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
-import { coverFor, PLATE, SceneRenderer, type SceneState } from './renderer';
+import { coverFor, layerTransform, PLATE, plateToScreen, REST_ZOOM, SceneRenderer, type SceneState } from './renderer';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 export interface SceneHandle {
@@ -10,6 +10,35 @@ export interface SceneHandle {
 
 const PLATE_SRC = '/img/hero/plate.webp';
 const DEPTH_SRC = '/img/hero/depth.webp';
+
+/*
+ * Camp props are real cut-outs on their own layers (so they never warp).
+ * Everything is placed in landscape-plate pixels; `d` is the layer's depth (0 far → 1 near).
+ */
+type Item = { kind: 'img' | 'glow' | 'shadow'; x: number; y: number; w: number; h?: number; src?: string; ratio?: number; cls?: string };
+const LAYERS: { key: string; d: number; items: Item[] }[] = [
+  {
+    key: 'stump',
+    d: 0.8,
+    items: [
+      { kind: 'shadow', x: 760, y: 728, w: 520, h: 36 },
+      { kind: 'img', src: '/img/hero/stump.webp', x: 704, y: 588, w: 618, ratio: 1930 / 537 },
+    ],
+  },
+  {
+    key: 'tent',
+    d: 0.72,
+    items: [
+      { kind: 'shadow', x: 1300, y: 684, w: 620, h: 44 },
+      { kind: 'img', src: '/img/hero/tent.webp', x: 1188, y: 275, w: 699, ratio: 1398 / 906 },
+      { kind: 'glow', x: 1405 - 70, y: 402 - 70, w: 140, h: 140, cls: 'glow glow--lantern' },
+      { kind: 'glow', x: 1617 - 55, y: 582 - 55, w: 110, h: 110, cls: 'glow glow--inner' },
+    ],
+  },
+];
+const MUG: [number, number] = [1128, 594]; // rim centre, on the stump layer
+const MUG_D = 0.8;
+const STEAM_UNIT = 44; // plate px
 
 function load(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -22,32 +51,45 @@ function load(src: string) {
 }
 
 /**
- * Photographic hero rendered in WebGL: a depth map turns one plate into a 3D scene.
- * Two canvases share the same shader — the back one draws the full frame, the front one
- * redraws only the near layers, so `children` (the headline) sits between the hills.
- * Falls back to the static plate when WebGL or motion is unavailable.
+ * Photographic hero: a WebGL landscape (depth parallax, fog, sun, steam) with crisp prop layers.
+ * Back canvas → headline → near-hills canvas (+ steam) → prop layers.
  */
 export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(function HeroScene({ children }, ref) {
   const wrap = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLCanvasElement>(null);
   const front = useRef<HTMLCanvasElement>(null);
   const plate = useRef<HTMLImageElement>(null);
+  const layerEls = useRef<(HTMLDivElement | null)[]>([]);
   const state = useRef<SceneState>({ mouse: [0, 0], scroll: 0, intro: 0, time: 0 });
+  const kick = useRef<() => void>(() => {});
 
   useImperativeHandle(ref, () => ({ state: state.current }), []);
 
-  // keep the headline anchored to the ridge line and the fallback image cropped like the shader
+  // place every item for the current viewport; keep the fallback image cropped like the shader
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
     const layout = () => {
       const w = el.clientWidth;
       const h = el.clientHeight;
-      const { vis, center } = coverFor(w, h);
-      const ridge = 0.5 + ((PLATE.ridge - center[1]) * 1.06) / vis[1];
+      const { scale, vis, center } = coverFor(w, h);
+      const k = scale * REST_ZOOM;
+      const ridge = 0.5 + ((PLATE.ridge - center[1]) * REST_ZOOM) / vis[1];
       el.style.setProperty('--ridge', `${(ridge * h).toFixed(1)}px`);
-      const left = center[0] - vis[0] / 2;
-      if (plate.current) plate.current.style.objectPosition = `${vis[0] >= 1 ? 50 : (left / (1 - vis[0])) * 100}% 50%`;
+      if (plate.current) {
+        const left = center[0] - vis[0] / 2;
+        plate.current.style.objectPosition = `${vis[0] >= 1 ? 50 : (left / (1 - vis[0])) * 100}% 50%`;
+      }
+      el.querySelectorAll<HTMLElement>('[data-item]').forEach((node) => {
+        const [x, y, iw, ih] = node.dataset.item!.split(',').map(Number);
+        const [sx, sy] = plateToScreen(x, y, w, h);
+        node.style.left = `${sx.toFixed(1)}px`;
+        node.style.top = `${sy.toFixed(1)}px`;
+        node.style.width = `${(iw * k).toFixed(1)}px`;
+        node.style.height = `${(ih * k).toFixed(1)}px`;
+      });
+      el.classList.add('is-placed');
+      kick.current();
     };
     layout();
     const ro = new ResizeObserver(layout);
@@ -70,9 +112,27 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     const size = () => {
       const w = el.clientWidth;
       const h = el.clientHeight;
-      // keep the pixel budget sane on very large screens
       const d = Math.min(dpr, 2400 / Math.max(w, 1));
       renderers.forEach((r) => r.resize(w, h, d));
+    };
+
+    const frame = () => {
+      const s = state.current;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      // prop layers: same projection as the shader, applied as one compositor transform each
+      LAYERS.forEach((L, i) => {
+        const node = layerEls.current[i];
+        if (!node) return;
+        const t = layerTransform(s, L.d, w, h);
+        node.style.transform = `translate3d(${t.tx.toFixed(2)}px, ${t.ty.toFixed(2)}px, 0) scale(${t.m.toFixed(5)})`;
+      });
+      // steam follows the mug's projected position
+      const t = layerTransform(s, MUG_D, w, h);
+      const [rx, ry] = plateToScreen(MUG[0], MUG[1], w, h);
+      const mug: [number, number] = [w / 2 + (rx - w / 2) * t.m + t.tx, h / 2 + (ry - h / 2) * t.m + t.ty];
+      const unit = STEAM_UNIT * coverFor(w, h).scale * REST_ZOOM * t.m;
+      renderers.forEach((r) => r.render(s, mug, unit));
     };
 
     const onMove = (e: PointerEvent) => {
@@ -91,16 +151,13 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       const s = state.current;
       s.time += dt;
       if (!fine) {
-        // touch: a slow, breathing camera drift keeps the scene alive
         target[0] = Math.sin(s.time * 0.23) * 0.45;
         target[1] = Math.cos(s.time * 0.19) * 0.25;
       }
-      const k = 1 - Math.pow(0.0025, dt); // frame-rate independent easing
+      const k = 1 - Math.pow(0.0025, dt);
       s.mouse[0] += (target[0] - s.mouse[0]) * k;
       s.mouse[1] += (target[1] - s.mouse[1]) * k;
-      renderers.forEach((r) => r.render(s));
-
-      // adaptive resolution: drop pixel density if the device struggles
+      frame();
       frames++;
       if (dt > 0.026) slow++;
       if (frames === 90) {
@@ -114,10 +171,14 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       if (visible && !document.hidden) raf = requestAnimationFrame(tick);
     };
     const start = () => {
-      if (!raf && !reduce && renderers.length) {
+      if (!raf && !reduce) {
         last = performance.now();
         raf = requestAnimationFrame(tick);
       }
+    };
+    kick.current = () => {
+      size();
+      if (reduce || !raf) frame();
     };
 
     (async () => {
@@ -127,12 +188,12 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
         renderers = [new SceneRenderer(back.current!, img, depth, 0), new SceneRenderer(front.current!, img, depth, 1)];
         size();
         if (reduce) state.current.intro = 1;
-        renderers.forEach((r) => r.render(state.current));
+        frame();
         el.classList.add('is-live');
-        start();
       } catch {
-        // keep the static plate
+        // static plate + prop layers remain
       }
+      start();
     })();
 
     const ro = new ResizeObserver(size);
@@ -171,6 +232,19 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       <canvas className="scene__gl scene__gl--back" ref={back} aria-hidden="true" />
       {children}
       <canvas className="scene__gl scene__gl--front" ref={front} aria-hidden="true" />
+      {LAYERS.map((L, i) => (
+        <div key={L.key} className={`scene__layer scene__layer--${L.key}`} ref={(n) => { layerEls.current[i] = n; }} aria-hidden="true">
+          {L.items.map((it, j) => {
+            const h = it.h ?? it.w / (it.ratio ?? 1);
+            const data = `${it.x},${it.y},${it.w},${h}`;
+            if (it.kind === 'img') {
+              // eslint-disable-next-line @next/next/no-img-element -- pre-optimised cut-out with alpha
+              return <img key={j} data-item={data} src={it.src} alt="" className="scene__prop" decoding="async" fetchPriority="high" />;
+            }
+            return <span key={j} data-item={data} className={it.kind === 'shadow' ? 'scene__shadow' : it.cls} />;
+          })}
+        </div>
+      ))}
     </div>
   );
 });

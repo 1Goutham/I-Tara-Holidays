@@ -7,32 +7,56 @@ export interface SceneState {
   time: number;
 }
 
-/** Plate-space positions (px in the 1755 × 896 source). */
+/** Landscape plate (px) and fixed points in it. */
 export const PLATE = {
   w: 1755,
   h: 896,
-  sun: [1215, 408],
-  mug: [1284, 596],
-  lantern: [1495, 336],
-  fire: [1715, 606],
-  ridge: 0.632, // plate y where the near hills start (headline tucks behind this line)
-} as const;
+  sun: [1215, 408] as [number, number],
+  ridge: 0.632, // plate y where the near hills begin (the headline tucks behind it)
+};
 
-/** Where the cover crop is centred, per viewport shape (portrait keeps sun, mug and tent). */
-export function focusFor(w: number, h: number): [number, number] {
-  return w / h < 0.8 ? [0.745, 0.5] : w / h < 1.4 ? [0.66, 0.5] : [0.5, 0.5];
+/** Camera shared by the shader and the DOM prop layers, so everything moves as one scene. */
+export const REST_ZOOM = 1.06;
+export function camera(s: SceneState) {
+  return {
+    zoom: REST_ZOOM + (1 - s.intro) * 0.05 + s.scroll * 0.08,
+    dolly: s.scroll * 0.12,
+    par: [s.mouse[0] * 0.011, s.mouse[1] * 0.006] as [number, number],
+  };
 }
 
-/** Visible plate fraction and centre for a canvas, matching CSS object-fit: cover. */
+/** Cover-crop focus per viewport shape (keeps the camp in frame). */
+export function focusFor(w: number, h: number): [number, number] {
+  const r = w / h;
+  return r < 0.8 ? [0.745, 0.5] : r < 1.4 ? [0.68, 0.5] : [0.58, 0.5];
+}
+
 export function coverFor(w: number, h: number) {
   const scale = Math.max(w / PLATE.w, h / PLATE.h);
   const vis: [number, number] = [w / (PLATE.w * scale), h / (PLATE.h * scale)];
   const [fx, fy] = focusFor(w, h);
-  const c: [number, number] = [
+  const center: [number, number] = [
     Math.min(Math.max(fx, vis[0] / 2), 1 - vis[0] / 2),
     Math.min(Math.max(fy, vis[1] / 2), 1 - vis[1] / 2),
   ];
-  return { vis, center: c };
+  return { scale, vis, center };
+}
+
+/** Rest position (CSS px) of a plate point for a given viewport. */
+export function plateToScreen(x: number, y: number, w: number, h: number) {
+  const { scale, center } = coverFor(w, h);
+  return [w / 2 + (x - center[0] * PLATE.w) * scale * REST_ZOOM, h / 2 + (y - center[1] * PLATE.h) * scale * REST_ZOOM] as const;
+}
+
+/** Transform for a DOM layer at depth `d`, matching the shader's projection exactly. */
+export function layerTransform(s: SceneState, d: number, w: number, h: number) {
+  const { zoom, dolly, par } = camera(s);
+  const { scale } = coverFor(w, h);
+  const z = zoom * (1 + dolly * d);
+  const m = z / REST_ZOOM;
+  const tx = -par[0] * (d - 0.3) * PLATE.w * scale * z;
+  const ty = -par[1] * (d - 0.3) * PLATE.h * scale * z;
+  return { m, tx, ty };
 }
 
 export class SceneRenderer {
@@ -41,6 +65,7 @@ export class SceneRenderer {
   private u: Record<string, WebGLUniformLocation | null> = {};
   private w = 0;
   private h = 0;
+  private dpr = 1;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -56,12 +81,12 @@ export class SceneRenderer {
 
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW); // one oversized triangle
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(this.prog, 'aPos');
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const n of ['uImg', 'uDepth', 'uRes', 'uImgRes', 'uCenter', 'uVis', 'uMouse', 'uTime', 'uScroll', 'uIntro', 'uLayer', 'uSun', 'uMug', 'uLantern', 'uFire']) {
+    for (const n of ['uImg', 'uDepth', 'uRes', 'uDpr', 'uImgRes', 'uCenter', 'uVis', 'uPar', 'uZoom', 'uDolly', 'uTime', 'uScroll', 'uIntro', 'uLayer', 'uSun', 'uMugPx', 'uSteamUnit']) {
       this.u[n] = gl.getUniformLocation(this.prog, n);
     }
     this.texture(0, plate);
@@ -69,11 +94,7 @@ export class SceneRenderer {
     gl.uniform1i(this.u.uImg, 0);
     gl.uniform1i(this.u.uDepth, 1);
     gl.uniform2f(this.u.uImgRes, PLATE.w, PLATE.h);
-    const pt = (p: readonly [number, number]) => [p[0] / PLATE.w, p[1] / PLATE.h] as const;
-    gl.uniform2f(this.u.uSun, ...pt(PLATE.sun));
-    gl.uniform2f(this.u.uMug, ...pt(PLATE.mug));
-    gl.uniform2f(this.u.uLantern, ...pt(PLATE.lantern));
-    gl.uniform2f(this.u.uFire, ...pt(PLATE.fire));
+    gl.uniform2f(this.u.uSun, PLATE.sun[0] / PLATE.w, PLATE.sun[1] / PLATE.h);
     gl.uniform1f(this.u.uLayer, layer);
   }
 
@@ -101,7 +122,6 @@ export class SceneRenderer {
     gl.bindTexture(gl.TEXTURE_2D, t);
     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-    // non-power-of-two safe sampling
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -114,22 +134,29 @@ export class SceneRenderer {
     if (w === this.w && h === this.h) return;
     this.w = w;
     this.h = h;
+    this.dpr = w / cssW;
     this.canvas.width = w;
     this.canvas.height = h;
     const gl = this.gl;
     gl.viewport(0, 0, w, h);
     gl.uniform2f(this.u.uRes, w, h);
+    gl.uniform1f(this.u.uDpr, this.dpr);
     const { vis, center } = coverFor(cssW, cssH);
     gl.uniform2f(this.u.uVis, vis[0], vis[1]);
     gl.uniform2f(this.u.uCenter, center[0], center[1]);
   }
 
-  render(s: SceneState) {
+  render(s: SceneState, mugPx: [number, number], steamUnit: number) {
     const gl = this.gl;
-    gl.uniform2f(this.u.uMouse, s.mouse[0], s.mouse[1]);
+    const cam = camera(s);
+    gl.uniform2f(this.u.uPar, cam.par[0], cam.par[1]);
+    gl.uniform1f(this.u.uZoom, cam.zoom);
+    gl.uniform1f(this.u.uDolly, cam.dolly);
     gl.uniform1f(this.u.uTime, s.time);
     gl.uniform1f(this.u.uScroll, s.scroll);
     gl.uniform1f(this.u.uIntro, s.intro);
+    gl.uniform2f(this.u.uMugPx, mugPx[0], mugPx[1]);
+    gl.uniform1f(this.u.uSteamUnit, steamUnit);
     if (this.layer === 1) {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);

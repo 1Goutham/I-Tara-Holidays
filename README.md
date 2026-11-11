@@ -39,14 +39,14 @@ lib/
   gsap.ts              GSAP + ScrollTrigger + SplitText registration, Lenis handle, scrollToId
   site.ts · data.ts    brand/contact details · content
 public/img/            logo mark and wordmarks (dark + light)
-public/img/hero/       plate.webp (colour) + depth.webp (R sharp depth for occlusion, G fog mask, B smooth depth for parallax)
+public/img/hero/       plate.webp + depth.webp (landscape), tent.webp + stump.webp (cut-out props)
 ```
 
 ### Hero scene
-The hero is one photograph plus a packed depth map, rendered by `components/hero-gl/shader.ts`.
-To swap the photo, export the new plate at the same size, rebuild the depth map, and update the
-sun, mug, lantern and fire positions and the `ridge` line in `components/hero-gl/renderer.ts`.
-If WebGL is unavailable, or the visitor prefers reduced motion, the static plate is shown instead.
+- **Landscape:** `public/img/hero/plate.webp`, rendered by `components/hero-gl/shader.ts` with depth parallax, fog, sun shafts and grade. It reads `depth.webp`: R = sharp depth for headline occlusion, G = fog mask, B = smooth depth for parallax.
+- **Camp props:** `tent.webp` and `stump.webp` are real cut-outs on their own DOM layers, so they never warp. Their positions and depths live in `LAYERS` in `components/hero-gl/hero-scene.tsx`, in landscape-plate pixels. They move with the same camera maths as the shader (`camera()` and `layerTransform()` in `renderer.ts`).
+- **Steam:** drawn in the near-layer pass and tracks the mug's live position. Lantern glows are CSS layers with flicker.
+- **Fallbacks:** without WebGL, or with reduced motion, the static plate and prop layers are shown.
 
 ### Motion conventions
 Add these attributes to markup and `components/motion/reveals.tsx` animates them:

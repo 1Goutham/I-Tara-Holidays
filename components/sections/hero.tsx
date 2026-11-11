@@ -63,6 +63,7 @@ export function Hero() {
             </h1>
           </div>
         </HeroScene>
+        <div className="hero__top" aria-hidden="true" />
         <div className="hero__fade" aria-hidden="true" />
         <div className="hero__shade" aria-hidden="true" />
         <div className="hero__bottom">

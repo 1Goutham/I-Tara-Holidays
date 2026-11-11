@@ -198,18 +198,33 @@ em { font-style: italic; }
 .scene__gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.2s var(--ease); }
 .scene.is-live .scene__gl { opacity: 1; }
 .scene__gl--front { pointer-events: none; }
+/* camp props: real cut-outs, each layer moved by one compositor transform */
+.scene__layer { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; pointer-events: none; }
+.scene:not(.is-placed) .scene__layer { visibility: hidden; }
+.scene__layer > * { position: absolute; display: block; }
+.scene__prop { user-select: none; -webkit-user-drag: none; }
+.scene__shadow { border-radius: 50%; background: radial-gradient(closest-side, rgba(12, 28, 18, 0.5), rgba(12, 28, 18, 0.18) 60%, transparent); }
+.glow { border-radius: 50%; mix-blend-mode: screen; background: radial-gradient(closest-side, rgba(255, 196, 120, 0.62), rgba(255, 168, 80, 0.2) 45%, transparent 72%); animation: flicker 3.4s linear infinite; }
+.glow--inner { animation-duration: 2.7s; animation-delay: -1.2s; }
+@keyframes flicker {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  9% { opacity: 0.78; } 17% { opacity: 1; transform: scale(1.04); } 31% { opacity: 0.84; }
+  44% { opacity: 0.97; } 58% { opacity: 0.8; transform: scale(0.98); } 71% { opacity: 1; } 86% { opacity: 0.86; }
+}
 
 .hero__copy {
   position: absolute; left: 0; right: 0; top: 0; height: var(--ridge, 62%);
   display: flex; align-items: flex-end; justify-content: center; padding: 0 var(--gutter); text-align: center; pointer-events: none;
 }
+@media (min-width: 1024px) { .hero__copy { padding-right: 18vw; } }
 .hero__title {
   font-family: var(--f-display); font-weight: 400; color: var(--green-900);
   font-size: clamp(3.4rem, 10.2vw, 11.4rem); line-height: 0.9; letter-spacing: -0.03em; margin: 0;
-  transform: translateY(0.07em); /* only the descenders tuck behind the near ridge */
+  transform: translateY(-0.16em); /* only the descenders tuck behind the near ridge */
   text-shadow: 0 2px 40px rgba(255, 244, 222, 0.35);
 }
 .hero__title em { color: #b7862d; }
+.hero__top { position: absolute; inset: 0 0 auto 0; height: 22%; pointer-events: none; z-index: 3; background: linear-gradient(180deg, rgba(240, 236, 228, 0.72), rgba(240, 236, 228, 0.28) 55%, transparent); }
 .hero__fade { position: absolute; inset: auto 0 0 0; height: 38%; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(6, 38, 25, 0.28) 45%, rgba(6, 38, 25, 0.78)); }
 .hero__shade { position: absolute; inset: 0; background: var(--green-950); opacity: 0; visibility: hidden; pointer-events: none; }
 
@@ -509,7 +524,7 @@ body.is-scrolled .wa { transform: scale(1); }
   .hero__bottom > :last-child { display: none; }
   .hero__bottom p { font-size: 0.85rem; }
   /* portrait: the headline sits in open sky above the sun */
-  .hero__copy { height: auto; top: clamp(96px, 15vh, 140px); align-items: flex-start; z-index: 1; }
+  .hero__copy { height: auto; top: clamp(96px, 15vh, 140px); align-items: flex-start; z-index: 2; }
   .hero__title { font-size: clamp(3.1rem, 15vw, 4.4rem); transform: none; }
   .figures dd { font-size: 2.6rem; }
   .dest__label { font-size: 2rem; }
