@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Cormorant, Jost } from 'next/font/google';
+import { Bodoni_Moda, Jost } from 'next/font/google';
 import { site } from '@/lib/site';
 import './globals.css';
 
-const display = Cormorant({ subsets: ['latin'], weight: ['300', '400', '500'], style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
+const display = Bodoni_Moda({ subsets: ['latin'], weight: 'variable', style: ['normal', 'italic'], axes: ['opsz'], variable: '--font-display', display: 'swap' });
 const body = Jost({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-body', display: 'swap' });
 
 export const metadata: Metadata = {
