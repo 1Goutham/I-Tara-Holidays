@@ -23,8 +23,6 @@ interface Ctx {
   setEnquiry: React.Dispatch<React.SetStateAction<EnquiryState>>;
   /** Prefill the enquiry form. Message is only set if empty unless `force` is true. */
   prefill: (p: Partial<EnquiryState>, force?: boolean) => void;
-  modal: string | null;
-  setModal: (id: string | null) => void;
 }
 
 const SiteContext = createContext<Ctx | null>(null);
@@ -39,7 +37,6 @@ export function Providers({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [toastState, setToastState] = useState({ msg: '', error: false, show: false });
   const [enquiry, setEnquiry] = useState<EnquiryState>(emptyEnquiry);
-  const [modal, setModal] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const toast = useCallback((msg: string, error = false) => {
@@ -57,8 +54,8 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ ready, setReady, toast, toastState, enquiry, setEnquiry, prefill, modal, setModal }),
-    [ready, toast, toastState, enquiry, prefill, modal],
+    () => ({ ready, setReady, toast, toastState, enquiry, setEnquiry, prefill }),
+    [ready, toast, toastState, enquiry, prefill],
   );
 
   return <SiteContext.Provider value={value}>{children}</SiteContext.Provider>;

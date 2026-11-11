@@ -2,14 +2,16 @@ import { Providers } from '@/components/providers';
 import { PointerEffects, Preloader, ScrollEffects, Toast } from '@/components/effects';
 import { Header } from '@/components/sections/header';
 import { Hero } from '@/components/sections/hero';
-import { About, Trust } from '@/components/sections/trust-about';
-import { Packages } from '@/components/sections/packages';
+import { Ticker } from '@/components/sections/ticker';
+import { Statement } from '@/components/sections/statement';
+import { Journeys } from '@/components/sections/journeys';
+import { StylesList } from '@/components/sections/styles-list';
 import { Destinations } from '@/components/sections/destinations';
-import { Process, Services, TravelStyles } from '@/components/sections/experiences';
+import { Flow } from '@/components/sections/flow';
+import { Services } from '@/components/sections/services';
 import { Stories } from '@/components/sections/stories';
 import { Contact } from '@/components/sections/contact';
 import { Footer } from '@/components/sections/footer';
-import { FilmModal } from '@/components/sections/film-modal';
 
 export default function HomePage() {
   return (
@@ -21,18 +23,17 @@ export default function HomePage() {
       <Header />
       <main id="main">
         <Hero />
-        <Trust />
-        <About />
-        <Packages />
+        <Ticker />
+        <Statement />
+        <Journeys />
+        <StylesList />
         <Destinations />
-        <TravelStyles />
+        <Flow />
         <Services />
-        <Process />
         <Stories />
         <Contact />
       </main>
       <Footer />
-      <FilmModal />
       <Toast />
     </Providers>
   );

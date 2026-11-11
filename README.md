@@ -29,13 +29,16 @@ app/
   sitemap.ts, robots.ts, icon.png, apple-icon.png, not-found.tsx
 components/
   providers.tsx        shared state: preloader ready flag, toast, enquiry prefill, modal
-  effects.tsx          preloader, scroll progress + parallax, cursor, magnetic buttons, tilt
-  ui/                  Reveal, SplitHeading, Counter, PillTabs, Img (next/image with fallback)
-  sections/            header, hero, search, packages, destinations, services, stories, contact, footer…
+  effects.tsx          preloader, scroll progress + parallax, cursor, magnetic buttons
+  illustrations.tsx    hand-built SVG art: hero dawn scene, lotus, line icons, footer wave
+  ui/                  Reveal, SplitHeading, Counter, Img (next/image with fallback)
+  sections/            header, hero, ticker, statement, journeys (pinned horizontal scroll),
+                       experiences list, destination arches, flow (scroll-drawn flight path),
+                       services, stories, contact, footer
 lib/
   site.ts              brand name, phone, email, WhatsApp, socials, nav
   data.ts              packages, destinations, travel styles, services, testimonials, gallery
-  motion.ts            useReveal hook + reduced-motion / pointer helpers
+  motion.ts            useReveal / useScrollProgress hooks + reduced-motion / pointer helpers
   submit.ts            client form submission helper
 public/img/            logo assets
 ```
@@ -48,7 +51,7 @@ public/img/            logo assets
    - `ENQUIRY_WEBHOOK_URL`: any endpoint that accepts JSON POSTs (Formspree, Getform, a Zapier or Make webhook, a CRM).
      Until this is set, `/api/enquiry` returns 503 and the enquiry form opens the visitor's email app instead.
 3. **Photos** come from Unsplash through `next/image`. Replace them with your own licensed images in `lib/data.ts`
-   (and the hero, about, services and contact sections). If you use another image host, add it to `images.remotePatterns` in `next.config.ts`.
+   (the hero itself is an illustration, so it needs no photo). If you use another image host, add it to `images.remotePatterns` in `next.config.ts`.
 4. **Content**: packages, prices, destinations and testimonials are samples in `lib/data.ts`.
 
 ## Deploy

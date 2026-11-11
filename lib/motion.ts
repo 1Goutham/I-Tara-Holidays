@@ -49,3 +49,49 @@ export function useReveal<T extends Element>({ delay = 0, keep = false } = {}) {
 
   return [ref, state] as const;
 }
+
+/**
+ * Calls `onProgress` with how far `ref` has travelled through the viewport.
+ * mode 'through': 0 when the top enters the bottom of the viewport → 1 when the bottom leaves the top.
+ * mode 'pin': 0 when the top hits the viewport top → 1 when the bottom hits the viewport bottom (for sticky scenes).
+ * mode 'center': tracks a reading line 60% down the viewport as it moves through the element.
+ */
+export function useScrollProgress<T extends HTMLElement>(
+  onProgress: (p: number) => void,
+  mode: 'through' | 'pin' | 'center' = 'through',
+) {
+  const ref = useRef<T>(null);
+  const cb = useRef(onProgress);
+  cb.current = onProgress;
+
+  useEffect(() => {
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      let p: number;
+      if (mode === 'pin') p = -r.top / Math.max(1, r.height - vh);
+      else if (mode === 'center') p = (vh * 0.6 - r.top) / Math.max(1, r.height);
+      else p = (vh - r.top) / (r.height + vh);
+      cb.current(Math.min(1, Math.max(0, p)));
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    update();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [mode]);
+
+  return ref;
+}

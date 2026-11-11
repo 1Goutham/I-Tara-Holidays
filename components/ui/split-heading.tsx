@@ -1,6 +1,6 @@
 'use client';
 
-import type { ElementType } from 'react';
+import { Fragment, type ElementType } from 'react';
 import { useReveal } from '@/lib/motion';
 
 /**
@@ -21,7 +21,8 @@ export function SplitHeading({ lines, as: Tag = 'h2', className = 'h2' }: { line
   return (
     <Tag ref={ref} className={className}>
       {lines.map((line, li) => (
-        <span className={`split${isIn ? ' is-in' : ''}`} key={li}>
+        <Fragment key={li}>
+        <span className={`split${isIn ? ' is-in' : ''}`}>
           {line.split(/(\*[^*]+\*)/).filter(Boolean).flatMap((chunk, ci) => {
             if (chunk.startsWith('*')) {
               return [
@@ -33,8 +34,9 @@ export function SplitHeading({ lines, as: Tag = 'h2', className = 'h2' }: { line
             const parts = chunk.split(/(\s+)/).filter(Boolean);
             return parts.map((p, pi) => (/^\s+$/.test(p) ? <span key={`sp${ci}-${pi}`}> </span> : word(p)));
           })}
-          {li < lines.length - 1 ? ' ' : null}
         </span>
+        {li < lines.length - 1 ? ' ' : null}
+        </Fragment>
       ))}
     </Tag>
   );

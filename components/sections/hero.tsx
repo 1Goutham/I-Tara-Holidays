@@ -1,49 +1,85 @@
-import { Img } from '../ui/img';
+'use client';
+
+import { useState, type FormEvent } from 'react';
+import { useSite } from '../providers';
 import { Reveal } from '../ui/reveal';
 import { SplitHeading } from '../ui/split-heading';
-import { PlayIcon } from '../icons';
-import { SearchForm } from './search-form';
-import { ModalTrigger } from './film-modal';
-import { unsplash } from '@/lib/data';
+import { HeroScene, Lotus } from '../illustrations';
+import { destinationOptions } from '@/lib/data';
+import { prefersReducedMotion } from '@/lib/motion';
 
 export function Hero() {
+  const { prefill, toast } = useSite();
+  const [dest, setDest] = useState('');
+  const [invalid, setInvalid] = useState(false);
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const d = dest.trim();
+    if (!d) {
+      setInvalid(true);
+      document.getElementById('hero-dest')?.focus();
+      toast('Tell us where you would like to go', true);
+      return;
+    }
+    prefill({ destination: d, message: `I'd love to plan a trip to ${d}. Please share ideas and a quote.` }, true);
+    document.getElementById('contact')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    setTimeout(() => document.getElementById('enq-name')?.focus({ preventScroll: true }), 900);
+  };
+
   return (
     <section className="hero" aria-label="Introduction">
-      <div className="hero__media" data-parallax="0.25">
-        <Img src={unsplash('1506905925346-21bda4d32df4')} alt="Sunrise over snow-capped mountain peaks" fill priority sizes="100vw" quality={80} />
-      </div>
-      <div className="hero__veil" />
-      <div className="hero__word" aria-hidden="true"><span>I&nbsp;Tara</span></div>
+      <div className="container hero__grid">
+        <div className="hero__copy">
+          <Reveal as="p" className="kicker">
+            <Lotus className="kicker__lotus" /> A holiday company
+          </Reveal>
+          <SplitHeading as="h1" className="display" lines={['Journeys,', '*beautifully*', 'looked after.']} />
+          <Reveal as="p" className="hero__lead" delay={350}>
+            Handpicked holidays across India and the world, planned slowly and looked after at every step, from the first hello to the flight home.
+          </Reveal>
 
-      <div className="container hero__content">
-        <Reveal as="p" className="eyebrow eyebrow--light"><span className="dot" /> Explore · Dream · Discover</Reveal>
-        <SplitHeading as="h1" className="hero__title" lines={['Journeys that feel', '*blessed,* not booked.']} />
-        <Reveal as="p" className="hero__lead" delay={300}>
-          Handpicked holidays across India and the world, planned with care and looked after at every step, from the first call to your trip home.
-        </Reveal>
-        <Reveal className="hero__cta" delay={400}>
-          <a href="#packages" className="btn btn--light magnetic"><span>Explore packages</span><i className="btn__arrow">→</i></a>
-          <ModalTrigger id="film" className="play" aria-label="Watch our story">
-            <span className="play__ring"><PlayIcon /></span>
-            <span>Watch our story</span>
-          </ModalTrigger>
-        </Reveal>
-      </div>
+          <Reveal as="form" className={`ask${invalid ? ' is-invalid' : ''}`} delay={450} onSubmit={onSubmit} noValidate>
+            <label htmlFor="hero-dest" className="sr-only">Where would you like to go?</label>
+            <input
+              id="hero-dest"
+              type="text"
+              list="dest-list"
+              autoComplete="off"
+              placeholder="Where would you like to go?"
+              value={dest}
+              onChange={(e) => {
+                setDest(e.target.value);
+                setInvalid(false);
+              }}
+            />
+            <datalist id="dest-list">
+              {destinationOptions.map((d) => <option key={d} value={d} />)}
+            </datalist>
+            <button type="submit" className="btn btn--dark magnetic">
+              <span>Plan it</span>
+              <i className="btn__arrow" aria-hidden="true">→</i>
+            </button>
+          </Reveal>
 
-      <Reveal as="aside" className="hero__card" variant="right" delay={600} aria-label="Featured trip">
-        <div className="hero__card-img">
-          <Img src={unsplash('1537996194471-e657df975ab4')} alt="Temple gate in Bali" fill sizes="260px" />
+          <Reveal as="ul" className="hero__meta" delay={550}>
+            <li><b>25k+</b> travellers</li>
+            <li><b>120+</b> destinations</li>
+            <li><b>4.9★</b> rated</li>
+          </Reveal>
         </div>
-        <div className="hero__card-body">
-          <small>Trending this season</small>
-          <strong>Bali Blissful Escape</strong>
-          <span>6N / 7D · from <b>₹54,999</b></span>
-        </div>
-      </Reveal>
 
-      <div className="container">
-        <SearchForm />
+        <Reveal className="hero__art" variant="clip" delay={150}>
+          <span className="hero__arch-line" aria-hidden="true" />
+          <HeroScene />
+          <div className="chip chip--a"><span className="live" /> Travel experts online</div>
+          <div className="chip chip--b"><b>Kashmir</b><small>Next departure · 12 Dec</small></div>
+        </Reveal>
       </div>
+
+      <a href="#statement" className="scroll-cue" aria-label="Scroll to explore">
+        <span />
+      </a>
     </section>
   );
 }

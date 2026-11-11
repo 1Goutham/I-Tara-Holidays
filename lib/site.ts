@@ -20,11 +20,10 @@ export const site = {
 } as const;
 
 export const nav = [
-  { href: '#packages', label: 'Packages', id: 'packages' },
+  { href: '#journeys', label: 'Journeys', id: 'journeys' },
   { href: '#destinations', label: 'Destinations', id: 'destinations' },
-  { href: '#styles', label: 'Experiences', id: 'styles' },
-  { href: '#services', label: 'Services', id: 'services' },
-  { href: '#stories', label: 'Stories', id: 'stories' },
+  { href: '#experiences', label: 'Experiences', id: 'experiences' },
+  { href: '#how', label: 'How it works', id: 'how' },
   { href: '#contact', label: 'Contact', id: 'contact' },
 ] as const;
 

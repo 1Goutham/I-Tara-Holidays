@@ -84,7 +84,7 @@ export function ScrollEffects() {
   return <div className="progress" ref={bar} aria-hidden="true" />;
 }
 
-/** Custom cursor, magnetic buttons (.magnetic) and 3D tilt cards (.tilt) — fine pointers only. */
+/** Custom cursor and magnetic buttons (.magnetic) — fine pointers only. */
 export function PointerEffects() {
   const cursor = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
@@ -129,7 +129,7 @@ export function PointerEffects() {
       }
     };
     const onOver = (e: PointerEvent) => {
-      const hover = !!(e.target as Element | null)?.closest('a, button, .dcard, .pkg, .style-card, input, select, textarea, label');
+      const hover = !!(e.target as Element | null)?.closest('a, button, input, select, textarea, label');
       cursor.current?.classList.toggle('is-hover', hover);
     };
     const onLeave = () => {

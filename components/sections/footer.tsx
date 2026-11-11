@@ -4,7 +4,8 @@ import Image from 'next/image';
 import { useState, type FormEvent } from 'react';
 import { useSite } from '../providers';
 import { FacebookIcon, InstagramIcon, LinkedinIcon, WhatsappIcon, YoutubeIcon } from '../icons';
-import { site } from '@/lib/site';
+import { Wave } from '../illustrations';
+import { nav, site } from '@/lib/site';
 import { submitForm } from '@/lib/submit';
 
 export function Footer() {
@@ -29,11 +30,33 @@ export function Footer() {
   return (
     <>
       <footer className="footer">
-        <div className="footer__word" aria-hidden="true">I Tara</div>
-        <div className="container footer__grid">
-          <div className="footer__brand">
-            <Image src="/img/logo.webp" alt={site.legalName} width={170} height={155} />
-            <p>Holidays planned with care, from Himalayan pilgrimages to tropical honeymoons.</p>
+        <Wave className="footer__wave" />
+        <div className="container">
+          <div className="footer__top">
+            <div className="footer__brand">
+              <Image src="/img/mark.png" alt="" width={72} height={72} />
+              <p className="footer__word">I Tara</p>
+              <p>Holidays planned with care, from Himalayan pilgrimages to tropical honeymoons.</p>
+            </div>
+            <div className="footer__news">
+              <h4>Travel notes, once a month</h4>
+              <p>Seasonal ideas and quiet deals. No spam.</p>
+              <form className="news" onSubmit={onSubscribe} noValidate>
+                <input type="email" placeholder="Your email" aria-label="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <button type="submit" aria-label="Subscribe">→</button>
+              </form>
+            </div>
+          </div>
+
+          <div className="footer__mid">
+            <nav aria-label="Footer">
+              {nav.map((n) => <a key={n.id} href={n.href}>{n.label}</a>)}
+              <a href="#">Terms &amp; privacy</a>
+            </nav>
+            <div className="footer__contact">
+              <a href={site.phoneHref}>{site.phoneDisplay}</a>
+              <a href={`mailto:${site.email}`}>{site.email}</a>
+            </div>
             <div className="socials">
               <a href={site.socials.instagram} aria-label="Instagram"><InstagramIcon /></a>
               <a href={site.socials.facebook} aria-label="Facebook"><FacebookIcon /></a>
@@ -41,42 +64,11 @@ export function Footer() {
               <a href={site.socials.linkedin} aria-label="LinkedIn"><LinkedinIcon /></a>
             </div>
           </div>
-          <div>
-            <h4>Holidays</h4>
-            <ul>
-              <li><a href="#packages">India tours</a></li>
-              <li><a href="#packages">International tours</a></li>
-              <li><a href="#styles">Honeymoon packages</a></li>
-              <li><a href="#styles">Pilgrimage tours</a></li>
-              <li><a href="#services">Group departures</a></li>
-            </ul>
+
+          <div className="footer__bottom">
+            <span>© {new Date().getFullYear()} {site.legalName}</span>
+            <a href="#top" className="to-top">Back to top ↑</a>
           </div>
-          <div>
-            <h4>Company</h4>
-            <ul>
-              <li><a href="#about">About us</a></li>
-              <li><a href="#services">Services</a></li>
-              <li><a href="#stories">Testimonials</a></li>
-              <li><a href="#contact">Contact</a></li>
-              <li><a href="#">Terms &amp; privacy</a></li>
-            </ul>
-          </div>
-          <div className="footer__news">
-            <h4>Travel inspiration, monthly</h4>
-            <p>Seasonal deals and destination guides. No spam.</p>
-            <form className="news" onSubmit={onSubscribe} noValidate>
-              <input type="email" placeholder="Your email" aria-label="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <button type="submit" aria-label="Subscribe">→</button>
-            </form>
-            <ul className="footer__contact">
-              <li><a href={site.phoneHref}>{site.phoneDisplay}</a></li>
-              <li><a href={`mailto:${site.email}`}>{site.email}</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="container footer__bottom">
-          <span>© {new Date().getFullYear()} {site.legalName}. All rights reserved.</span>
-          <a href="#top" className="to-top">Back to top ↑</a>
         </div>
       </footer>
 

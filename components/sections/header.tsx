@@ -3,27 +3,28 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { nav, site } from '@/lib/site';
-import { PhoneIcon } from '../icons';
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false); // keeps the menu in the DOM during its close animation
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [active, setActive] = useState<string>('');
+  const [solid, setSolid] = useState(false);
+  const [active, setActive] = useState('');
 
-  // Hide on scroll down, reveal on scroll up
   useEffect(() => {
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
-      setHidden(y > last && y > 300);
+      setHidden(y > last && y > 320);
+      setSolid(y > 40);
       last = y;
     };
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Highlight the section in view
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return;
     const io = new IntersectionObserver(
@@ -41,7 +42,6 @@ export function Header() {
     return () => io.disconnect();
   }, []);
 
-  // Mobile menu lifecycle
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     if (open) {
@@ -54,7 +54,6 @@ export function Header() {
     return () => clearTimeout(t);
   }, [open]);
 
-  const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!mounted) return setVisible(false);
     const r = requestAnimationFrame(() => setVisible(open));
@@ -63,34 +62,25 @@ export function Header() {
 
   return (
     <>
-      <header className={`header${hidden && !open ? ' is-hidden' : ''}`} id="top">
+      <header className={`header${solid ? ' is-solid' : ''}${hidden && !open ? ' is-hidden' : ''}${open ? ' is-menu' : ''}`} id="top">
         <div className="header__bar container">
           <a href="#top" className="brand" aria-label={`${site.legalName}, home`}>
-            <Image src="/img/mark.png" alt="" width={46} height={46} priority />
+            <Image src="/img/mark.png" alt="" width={44} height={44} priority />
             <span className="brand__text">
               <b>I Tara</b>
               <small>{site.tagline}</small>
             </span>
           </a>
           <nav className="nav" aria-label="Primary">
-            <ul>
-              {nav.map((n) => (
-                <li key={n.id}>
-                  <a href={n.href} className={active === n.id ? 'is-active' : undefined}>
-                    {n.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            {nav.map((n) => (
+              <a key={n.id} href={n.href} className={active === n.id ? 'is-active' : undefined}>
+                {n.label}
+              </a>
+            ))}
           </nav>
           <div className="header__actions">
-            <a href={site.phoneHref} className="header__call" aria-label="Call us">
-              <span className="ico-circle"><PhoneIcon /></span>
-              <span><small>Need help?</small>{site.phoneDisplay}</span>
-            </a>
-            <a href="#contact" className="btn btn--primary btn--sm magnetic">
-              <span>Plan my trip</span>
-              <i className="btn__arrow">→</i>
+            <a href="#contact" className="btn btn--dark btn--sm magnetic">
+              <span>Plan a trip</span>
             </a>
             <button
               className="burger"
@@ -110,6 +100,7 @@ export function Header() {
         <nav aria-label="Mobile">
           {nav.map((n, i) => (
             <a key={n.id} href={n.href} onClick={() => setOpen(false)} style={{ transitionDelay: visible ? `${200 + i * 60}ms` : '0ms' }}>
+              <small>0{i + 1}</small>
               {n.label}
             </a>
           ))}

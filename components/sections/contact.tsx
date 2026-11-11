@@ -2,11 +2,10 @@
 
 import { useState, type FormEvent } from 'react';
 import { emptyEnquiry, useSite, type EnquiryState } from '../providers';
-import { Img } from '../ui/img';
+import { Lotus } from '../illustrations';
 import { Reveal } from '../ui/reveal';
 import { SplitHeading } from '../ui/split-heading';
 import { ClockIcon, MailIcon, PhoneIcon } from '../icons';
-import { unsplash } from '@/lib/data';
 import { site } from '@/lib/site';
 import { submitForm } from '@/lib/submit';
 
@@ -67,24 +66,24 @@ export function Contact() {
     <section className="contact section" id="contact">
       <div className="container">
         <div className="contact__card">
-          <div className="contact__bg" data-parallax="0.15">
-            <Img src={unsplash('1507525428034-b723cf961d3e')} alt="" fill sizes="100vw" quality={70} />
-          </div>
           <div className="contact__copy">
-            <Reveal as="p" className="eyebrow eyebrow--light"><span className="dot" /> Let&apos;s go</Reveal>
+            <Reveal as="p" className="kicker">Let&apos;s begin</Reveal>
             <SplitHeading lines={['Your next adventure', '*awaits.*']} />
-            <Reveal as="p">
-              Share a few details and a travel specialist will send a personalised, fully priced itinerary within 24 hours. There is no cost and no obligation.
+            <Reveal as="p" className="contact__lead">
+              Share a few details and a travel specialist will send a personalised, fully priced itinerary within 24 hours. No cost, no obligation.
             </Reveal>
             <Reveal as="ul" className="contact__list">
-              <li><span className="ico-circle"><PhoneIcon /></span><a href={site.phoneHref}>{site.phoneDisplay}</a></li>
-              <li><span className="ico-circle"><MailIcon /></span><a href={`mailto:${site.email}`}>{site.email}</a></li>
-              <li><span className="ico-circle"><ClockIcon /></span>{site.hours}</li>
+              <li><PhoneIcon /><a href={site.phoneHref}>{site.phoneDisplay}</a></li>
+              <li><MailIcon /><a href={`mailto:${site.email}`}>{site.email}</a></li>
+              <li><ClockIcon />{site.hours}</li>
             </Reveal>
+            <div className="contact__art" aria-hidden="true">
+              <span className="contact__sun" />
+              <Lotus className="contact__lotus" />
+            </div>
           </div>
 
           <Reveal as="form" variant="right" className="enquiry" onSubmit={onSubmit} noValidate aria-label="Holiday enquiry">
-            <h3>Plan my holiday</h3>
             <div className="enquiry__row">
               <label className={cls('name')}>
                 <input id="enq-name" type="text" placeholder=" " autoComplete="name" required value={f.name} onChange={(e) => set('name', e.target.value)} onBlur={() => blur('name')} aria-invalid={!!errors.name} />
@@ -117,9 +116,9 @@ export function Contact() {
               <input id="enq-consent" type="checkbox" checked={f.consent} onChange={(e) => set('consent', e.target.checked)} />
               <span>I agree to be contacted by I Tara about my enquiry.</span>
             </label>
-            <button className={`btn btn--primary btn--block magnetic${sending ? ' is-loading' : ''}`} type="submit" disabled={sending}>
+            <button className={`btn btn--dark btn--block magnetic${sending ? ' is-loading' : ''}`} type="submit" disabled={sending}>
               <span>{sending ? 'Sending' : 'Send enquiry'}</span>
-              <i className="btn__arrow">→</i>
+              <i className="btn__arrow" aria-hidden="true">→</i>
             </button>
             <p className="enquiry__note">We never share your details. Typical reply time is under 2 hours.</p>
           </Reveal>
