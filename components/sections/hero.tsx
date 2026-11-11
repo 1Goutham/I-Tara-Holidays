@@ -51,19 +51,24 @@ export function Hero() {
     { scope: root },
   );
 
-  // entrance, once the preloader has lifted
+  // Dawn entrance: the paper veil lifts like morning light, the sun rises,
+  // the ranges settle from back to front and the headline is set line by line.
   useGSAP(
     () => {
       if (!ready) return;
       const q = gsap.utils.selector(root);
       gsap.set(q('.hero__title, .hero__bottom'), { visibility: 'visible' });
-      if (prefersReducedMotion()) return;
+      if (prefersReducedMotion()) {
+        gsap.set(q('.hero__veil'), { autoAlpha: 0 });
+        return;
+      }
       const split = SplitText.create(q('.hero__title'), { type: 'lines', mask: 'lines', linesClass: 'line' });
-      const tl = gsap.timeline();
-      tl.from(q('.hl__inner'), { yPercent: 14, duration: 2.4, stagger: 0.08, ease: 'expo.out' }, 0)
-        .from(q('.hl--sun span'), { scale: 0.6, autoAlpha: 0, duration: 2.4 }, 0.1)
-        .from(split.lines, { yPercent: 115, rotate: 3, transformOrigin: '0% 100%', duration: 1.5, stagger: 0.12 }, 0.35)
-        .from(q('.hero__bottom > *'), { autoAlpha: 0, y: 12, duration: 1, stagger: 0.08, ease: 'power3.out' }, 1.1);
+      const tl = gsap.timeline({ onComplete: () => split.revert() });
+      tl.to(q('.hero__veil'), { autoAlpha: 0, duration: 1.8, ease: 'power2.inOut' }, 0)
+        .from(q('.hl--sun'), { yPercent: 60, duration: 3, ease: 'expo.out' }, 0.1)
+        .from(q('.hl__inner'), { yPercent: 10, duration: 2.6, stagger: 0.1, ease: 'expo.out' }, 0.15)
+        .from(split.lines, { yPercent: 118, duration: 1.6, stagger: 0.14, ease: 'expo.out' }, 0.55)
+        .from(q('.hero__bottom > *'), { autoAlpha: 0, y: 14, duration: 1.2, stagger: 0.1, ease: 'power3.out' }, 1.2);
     },
     { scope: root, dependencies: [ready] },
   );
@@ -78,6 +83,7 @@ export function Hero() {
           </h1>
         </div>
         <LandscapeFront />
+        <div className="hero__veil" aria-hidden="true" />
         <div className="hero__bottom">
           <p>Handpicked holidays across India and the world, planned with care and looked after at every step.</p>
           <span className="hero__scroll"><i />Scroll</span>

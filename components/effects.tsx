@@ -1,86 +1,35 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useSite } from './providers';
-import { gsap, getLenis, ScrollTrigger } from '@/lib/gsap';
+import { gsap, ScrollTrigger } from '@/lib/gsap';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
-/** Counter preloader; the panel lifts away, then the page (and its reveals) is released. */
-export function Preloader() {
+/**
+ * No loading screen: release the page as soon as the web fonts are ready (max 700ms) so the
+ * first animated frame is typographically final, then refresh scroll positions once
+ * everything (fonts, images) has settled.
+ */
+export function Boot() {
   const { setReady } = useSite();
-  const root = useRef<HTMLDivElement>(null);
-  const num = useRef<HTMLSpanElement>(null);
-  const bar = useRef<HTMLSpanElement>(null);
-  const [gone, setGone] = useState(false);
-
   useEffect(() => {
-    document.body.classList.add('is-loading');
+    let done = false;
     const release = () => {
-      document.body.classList.remove('is-loading');
+      if (done) return;
+      done = true;
       document.body.classList.add('is-ready');
-      getLenis()?.start();
       setReady(true);
     };
-    if (prefersReducedMotion()) {
-      setGone(true);
-      release();
-      return;
-    }
-
-    const counter = { v: 0 };
-    let loaded = document.readyState === 'complete';
-    const onLoad = () => (loaded = true);
-    window.addEventListener('load', onLoad, { once: true });
-
-    const tl = gsap.timeline({ paused: true });
-    tl.to(counter, {
-      v: 100,
-      duration: 2.2,
-      ease: 'power2.inOut',
-      onUpdate: () => {
-        if (num.current) num.current.textContent = String(Math.round(counter.v)).padStart(3, '0');
-        if (bar.current) bar.current.style.transform = `scaleX(${counter.v / 100})`;
-      },
-    })
-      .to('.preloader__inner', { autoAlpha: 0, y: -20, duration: 0.6, ease: 'power2.in' }, '+=0.15')
-      .to(root.current, { yPercent: -100, duration: 1.2, ease: 'expo.inOut' }, '-=0.2')
-      .add(release, '-=0.85')
-      .add(() => setGone(true));
-
-    // start once fonts are in (max 1.2s wait) so the first frame is typographically correct
-    const start = () => tl.play();
-    const t = setTimeout(start, 1200);
-    document.fonts?.ready.then(() => {
-      clearTimeout(t);
-      start();
-    });
-    // never hold the page longer than 5s on slow images
-    const guard = setTimeout(() => {
-      if (!loaded) tl.timeScale(2);
-    }, 3000);
-
+    const t = setTimeout(release, 700);
+    document.fonts?.ready.then(release).catch(release);
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener('load', refresh, { once: true });
     return () => {
       clearTimeout(t);
-      clearTimeout(guard);
-      window.removeEventListener('load', onLoad);
-      tl.kill();
+      window.removeEventListener('load', refresh);
     };
   }, [setReady]);
-
-  if (gone) return null;
-  return (
-    <div className="preloader" ref={root} aria-hidden="true">
-      <div className="preloader__inner">
-        <Image src="/img/wordmark.png" alt="" width={260} height={76} priority className="preloader__logo" />
-        <div className="preloader__foot">
-          <span className="preloader__label">Preparing your journey</span>
-          <span className="preloader__num" ref={num}>000</span>
-        </div>
-        <span className="preloader__bar"><span ref={bar} /></span>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 /** Thin page-progress hairline. */

@@ -12,7 +12,7 @@ export function Header() {
   const [dark, setDark] = useState(false);
   const [active, setActive] = useState('');
 
-  // Hide on scroll down, show on scroll up; switch to light text over dark sections.
+  // Hide on scroll down, show on scroll up.
   useEffect(() => {
     const st = ScrollTrigger.create({
       start: 0,
@@ -21,10 +21,31 @@ export function Header() {
         const y = s.scroll();
         setSolid(y > 60);
         setHidden(s.direction === 1 && y > 400);
-        const probe = document.elementsFromPoint(window.innerWidth / 2, 40).find((el) => el.closest('[data-theme]'));
-        setDark(probe?.closest<HTMLElement>('[data-theme]')?.dataset.theme === 'dark');
       },
     });
+    return () => st.kill();
+  }, []);
+
+  // Light text while a dark section sits under the header line (explicit ranges, no hit-testing).
+  useEffect(() => {
+    const over = new Set<Element>();
+    const triggers = Array.from(document.querySelectorAll('[data-theme="dark"]')).map((el) =>
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 41px',
+        end: 'bottom 41px',
+        onToggle: (s) => {
+          if (s.isActive) over.add(el);
+          else over.delete(el);
+          setDark(over.size > 0);
+        },
+      }),
+    );
+    return () => triggers.forEach((t) => t.kill());
+  }, []);
+
+  // Active nav item
+  useEffect(() => {
     const sections = nav.map((n) =>
       ScrollTrigger.create({
         trigger: `#${n.id}`,
@@ -34,10 +55,7 @@ export function Header() {
         onLeaveBack: () => n.id === nav[0].id && setActive(''),
       }),
     );
-    return () => {
-      st.kill();
-      sections.forEach((s) => s.kill());
-    };
+    return () => sections.forEach((s) => s.kill());
   }, []);
 
   // Mobile menu

@@ -5,7 +5,7 @@ import { useSite } from '../providers';
 import { Img } from '../ui/img';
 import { packages, type Category } from '@/lib/data';
 import { inr } from '@/lib/site';
-import { gsap, scrollToId, useGSAP } from '@/lib/gsap';
+import { gsap, ScrollTrigger, scrollToId, useGSAP } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
 type Filter = 'all' | Category;
@@ -56,7 +56,12 @@ export function Journeys() {
       if (!prefersReducedMotion()) {
         gsap.from('.journey', { autoAlpha: 0, y: 40, duration: 1.2, stagger: 0.07, ease: 'power3.out', scrollTrigger: { trigger: track.current, start: 'top 85%', once: true } });
       }
-      return () => mm.revert();
+      // the pin length changed: re-measure every trigger below this section
+      const raf = requestAnimationFrame(() => ScrollTrigger.refresh());
+      return () => {
+        cancelAnimationFrame(raf);
+        mm.revert();
+      };
     },
     { scope: root, dependencies: [filter], revertOnUpdate: true },
   );

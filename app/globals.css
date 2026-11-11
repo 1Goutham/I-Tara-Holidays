@@ -48,7 +48,6 @@ body {
   text-rendering: optimizeLegibility;
   font-feature-settings: 'ss01', 'cv11';
 }
-body.is-loading { overflow: hidden; }
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
@@ -133,14 +132,6 @@ em { font-style: italic; }
 .btn.is-loading span::after { content: '…'; }
 
 /* ---------- Preloader / progress / cursor / grain ---------- */
-.preloader { position: fixed; inset: 0; z-index: 1000; background: var(--paper); }
-.preloader__inner { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--gutter); }
-.preloader__logo { width: clamp(180px, 20vw, 260px); height: auto; }
-.preloader__foot { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(var(--gutter) + 6px); display: flex; justify-content: space-between; align-items: flex-end; }
-.preloader__label { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.preloader__num { font-family: var(--f-display); font-size: clamp(4rem, 10vw, 9rem); line-height: 0.8; color: var(--green-900); font-feature-settings: 'tnum'; }
-.preloader__bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--line); }
-.preloader__bar span { display: block; height: 100%; background: var(--green-900); transform-origin: left; transform: scaleX(0); }
 
 .progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 300; background: var(--gold); transform-origin: left; transform: scaleX(0); pointer-events: none; }
 
@@ -206,6 +197,9 @@ em { font-style: italic; }
   background: linear-gradient(180deg, #d6e5df 0%, #e8ebe2 32%, #f1e6d2 58%, #f2d8b2 82%, #eecaa0 100%);
 }
 .hl { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
+.hero__veil { position: absolute; inset: 0; z-index: 3; background: var(--paper); pointer-events: none; }
+.js .hero__veil { opacity: 1; }
+html:not(.js) .hero__veil { display: none; }
 .hl__inner { position: absolute; inset: 0 -3%; will-change: transform; }
 .hl svg { display: block; width: 100%; height: 100%; stroke: none; }
 .hl--sun { inset: auto; left: 61%; top: 27%; width: clamp(110px, 13vw, 210px); aspect-ratio: 1; }
@@ -284,7 +278,12 @@ em { font-style: italic; }
 
 @media (min-width: 1024px) {
   .journeys { padding: 0; }
-  .journeys__inner { height: 100vh; display: flex; flex-direction: column; justify-content: center; padding-top: 70px; }
+  /* pinned: everything fits below the 82px header at any viewport height */
+  .journeys__inner { height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 118px 0 24px; }
+  .journeys__head { margin-bottom: clamp(24px, 3.5vh, 44px); }
+  .journeys__head .h2 { font-size: clamp(2.4rem, min(4.4vw, 7vh), 4.4rem); }
+  .journey { flex-basis: clamp(240px, min(25vw, calc((100vh - 470px) * 0.8)), 390px); }
+  .journeys__progress { margin-top: clamp(20px, 3vh, 40px); }
   .journeys__track { will-change: transform; }
 }
 @media (max-width: 1023px) {
@@ -470,7 +469,8 @@ body.is-scrolled .wa { transform: scale(1); }
 
 /* ---------- Reveal pre-states (GSAP takes over) ---------- */
 .js [data-split], .js [data-fade], .js [data-img], .js [data-rule], .js .hero__title, .js .hero__bottom { visibility: hidden; }
-.line-mask { padding-bottom: 0.1em; margin-bottom: -0.1em; }
+/* masks get breathing room so ascenders, descenders and italic overhangs are never clipped */
+.line-mask { padding: 0.14em 0.12em 0.16em; margin: -0.14em -0.12em -0.16em; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
@@ -525,4 +525,5 @@ body.is-scrolled .wa { transform: scale(1); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
   .js [data-split], .js [data-fade], .js [data-img], .js [data-rule], .js .hero__title, .js .hero__bottom { visibility: visible; }
+  .hero__veil { display: none; }
 }

@@ -23,25 +23,20 @@ export function Reveals() {
         return;
       }
 
+      // Split after fonts are ready (`ready` waits for them) and restore the original markup
+      // once the lines are in, so nothing stays clipped and resizes reflow naturally.
       gsap.utils.toArray<HTMLElement>('[data-split]').forEach((el) => {
         if (el.closest('[data-own-motion]')) return;
-        SplitText.create(el, {
-          type: 'lines',
-          mask: 'lines',
-          linesClass: 'line',
-          autoSplit: true,
-          onSplit(self) {
-            gsap.set(el, { visibility: 'visible' });
-            return gsap.from(self.lines, {
-              yPercent: 115,
-              rotate: 2.5,
-              transformOrigin: '0% 100%',
-              duration: 1.25,
-              stagger: 0.09,
-              delay: parseFloat(el.dataset.delay || '0'),
-              scrollTrigger: { trigger: el, start: 'top 88%', once: true },
-            });
-          },
+        const split = SplitText.create(el, { type: 'lines', mask: 'lines', linesClass: 'line' });
+        gsap.set(el, { visibility: 'visible' });
+        gsap.from(split.lines, {
+          yPercent: 118,
+          duration: 1.3,
+          stagger: 0.1,
+          ease: 'expo.out',
+          delay: parseFloat(el.dataset.delay || '0'),
+          scrollTrigger: { trigger: el, start: 'top 88%', once: true },
+          onComplete: () => split.revert(),
         });
       });
 

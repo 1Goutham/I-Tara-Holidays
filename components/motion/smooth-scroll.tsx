@@ -15,7 +15,6 @@ export function SmoothScroll() {
     const tick = (t: number) => lenis.raf(t * 1000);
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
-    if (document.body.classList.contains('is-loading')) lenis.stop();
     return () => {
       gsap.ticker.remove(tick);
       lenis.destroy();

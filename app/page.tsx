@@ -1,5 +1,5 @@
 import { Providers } from '@/components/providers';
-import { Cursor, Grain, Magnetic, Preloader, ScrollProgress, Toast } from '@/components/effects';
+import { Boot, Cursor, Grain, Magnetic, ScrollProgress, Toast } from '@/components/effects';
 import { SmoothScroll } from '@/components/motion/smooth-scroll';
 import { Reveals } from '@/components/motion/reveals';
 import { Header } from '@/components/sections/header';
@@ -20,7 +20,7 @@ export default function HomePage() {
     <Providers>
       <a className="skip-link" href="#main">Skip to content</a>
       <SmoothScroll />
-      <Preloader />
+      <Boot />
       <ScrollProgress />
       <Cursor />
       <Magnetic />
