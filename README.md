@@ -47,7 +47,8 @@ Two canvases share one camera (`camera()` and `layerTransform()` in `components/
 
 - **Back canvas** (`shader.ts`): renders the landscape plate with depth parallax, fog, sun shafts and grade.
 - **Front canvas** (`front.ts` + `composite.ts`), drawn in this order:
-  1. The near hills that pass in front of the headline.
+  1. The mountain cut-out (`mountains.webp`), which replaces the plate's mid-ground. It is drawn in front of the headline so the text tucks behind its ridgeline.
+  2. The plate's near meadow, redrawn over the cut-out's lower edge.
   2. Contact shadows.
   3. Photographic cut-outs from back to front (`DRAWS` in `hero-scene.tsx`): grass strips behind the props, the tent, grass along the tent floor, the stump, grass over its base, and the near meadow. Each one gets light wrap, a sun rim light, a grade and haze.
   4. Mug steam.

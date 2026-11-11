@@ -15,6 +15,7 @@ const SRC = {
   stump: '/img/hero/stump.webp',
   tent: '/img/hero/tent.webp',
   strip: '/img/hero/grass-strip.webp',
+  mountains: '/img/hero/mountains.webp',
 };
 
 /* ----------------------------------------------------------------------------
@@ -33,6 +34,8 @@ const SHADOWS = [
  * Order is back → front. `shade` < 1 sits further back, in shadow.
  */
 const STRIP_RATIO = 9.231;
+// clean mountain cut-out that replaces the plate's mid-ground; the headline tucks behind its ridgeline
+const MOUNTAINS = { x: -70, y: 300, w: 1900, ratio: 2000 / 667, d: 0.3 };
 type Draw = { tex: TexKey; x: number; y: number; w: number; ratio: number; d: number; strip?: boolean; seed?: number; flip?: boolean; shade?: number; wrap?: number };
 const DRAWS: Draw[] = [
   // behind the tent and stump: blades rising past their back edges
@@ -181,6 +184,7 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       backR?.render(s, mug, steamUnit);
       if (frontR) {
         const f: FrontFrame = {
+          backdrop: [{ tex: 'mountains', rect: rectFor(s, MOUNTAINS.x, MOUNTAINS.y, MOUNTAINS.w, MOUNTAINS.w / MOUNTAINS.ratio, MOUNTAINS.d, W, H) }],
           draws: DRAWS.map<PropDraw>((d) => ({ tex: d.tex, rect: rectFor(s, d.x, d.y, d.w, d.w / d.ratio, d.d, W, H), strip: d.strip, seed: d.seed, flip: d.flip, shade: d.shade, wrap: d.wrap })),
           shadows: SHADOWS.map((sh) => ({ rect: rectFor(s, sh.x, sh.y, sh.w, sh.h, sh.d, W, H), opacity: sh.o })),
           mug,
@@ -239,16 +243,16 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     (async () => {
       // report progress to the loader
       let done = 0;
-      const total = 5;
+      const total = 6;
       const track = <T,>(p: Promise<T>) => p.then((v) => (emit('itara:hero-progress', ++done / total), v));
       try {
-        const [img, depth, stump, tent, strip] = await Promise.all(
-          [SRC.plate, SRC.depth, SRC.stump, SRC.tent, SRC.strip].map((u) => track(loadImage(u))),
+        const [img, depth, stump, tent, strip, mountains] = await Promise.all(
+          [SRC.plate, SRC.depth, SRC.stump, SRC.tent, SRC.strip, SRC.mountains].map((u) => track(loadImage(u))),
         );
         if (disposed) return;
         backR = new SceneRenderer(back.current!, img, depth, 0);
         try {
-          frontR = new FrontRenderer(front.current!, { plate: img, depth, blur: blurred(img), stump, tent, strip });
+          frontR = new FrontRenderer(front.current!, { plate: img, depth, blur: blurred(img), stump, tent, strip, mountains });
         } catch (e) {
           console.warn('[hero] front compositor unavailable', e);
         }

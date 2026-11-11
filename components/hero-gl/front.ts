@@ -2,7 +2,7 @@ import { FRAG, VERT } from './shader';
 import { SPRITE_FRAG, SPRITE_VERT } from './composite';
 import { camera, coverFor, PLATE, REST_ZOOM, type SceneState } from './renderer';
 
-export type TexKey = 'stump' | 'tent' | 'strip';
+export type TexKey = 'stump' | 'tent' | 'strip' | 'mountains';
 export interface PropDraw {
   tex: TexKey;
   rect: [number, number, number, number]; // CSS px x, y, w, h (already camera-transformed)
@@ -15,6 +15,8 @@ export interface PropDraw {
 export interface ShadowDraw { rect: [number, number, number, number]; opacity: number }
 export interface FrontFrame {
   /** drawn back to front: hills → shadows → these → steam */
+  /** drawn before the near meadow: the mountain band in front of the headline */
+  backdrop: PropDraw[];
   draws: PropDraw[];
   shadows: ShadowDraw[];
   mug: [number, number];
@@ -40,7 +42,7 @@ export class FrontRenderer {
 
   constructor(
     private canvas: HTMLCanvasElement,
-    imgs: { plate: HTMLImageElement; depth: HTMLImageElement; blur: TexImageSource; stump: HTMLImageElement; tent: HTMLImageElement; strip: HTMLImageElement },
+    imgs: { plate: HTMLImageElement; depth: HTMLImageElement; blur: TexImageSource; stump: HTMLImageElement; tent: HTMLImageElement; strip: HTMLImageElement; mountains: HTMLImageElement },
   ) {
     const gl = canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true, depth: false, powerPreference: 'high-performance' });
     if (!gl) throw new Error('webgl unavailable');
@@ -58,6 +60,7 @@ export class FrontRenderer {
     this.tex.stump = this.texture(imgs.stump, true, gl.RGBA);
     this.tex.tent = this.texture(imgs.tent, true, gl.RGBA);
     this.tex.strip = this.texture(imgs.strip, true, gl.RGBA);
+    this.tex.mountains = this.texture(imgs.mountains, true, gl.RGBA);
 
     gl.useProgram(this.land.p);
     gl.uniform1i(this.land.u.uImg, 0);
@@ -145,7 +148,13 @@ export class FrontRenderer {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.DEPTH_TEST);
 
-    // 1 · near landscape (hills and meadow that pass in front of the headline)
+    // 1 · mountain band (passes in front of the headline), hazed by distance
+    this.useSprite(W, H, vis, center, cam.zoom, sunPx);
+    gl.uniform1f(this.sprite.u.uTime, s.time);
+    for (const d of f.backdrop) this.drawSprite(this.tex[d.tex], d.rect, { mode: 0, opacity: 1, wrap: 0.45, rim: 0.35, haze: 0.14, shade: 1 });
+    gl.disableVertexAttribArray(this.sprite.a.aCorner);
+
+    // 2 · near meadow from the plate, over the mountain band's lower edge
     this.landPass(s, 1, f);
 
     // 2 · contact shadows
