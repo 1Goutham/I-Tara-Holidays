@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
 import { coverFor, layerTransform, PLATE, plateToScreen, REST_ZOOM, SceneRenderer, type SceneState } from './renderer';
-import { FrontRenderer, type FrontFrame, type GrassPatch } from './front';
+import { FrontRenderer, type FrontFrame, type PropDraw, type TexKey } from './front';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 export interface SceneHandle {
@@ -14,12 +14,12 @@ const SRC = {
   depth: '/img/hero/depth.webp',
   stump: '/img/hero/stump.webp',
   tent: '/img/hero/tent.webp',
-  grass: '/img/hero/grass.bin',
+  strip: '/img/hero/grass-strip.webp',
 };
 
 /* ----------------------------------------------------------------------------
  * Scene layout, in landscape-plate pixels. `d` = depth (0 far → 1 near, >1 camera-side).
- * The tent and stump are drawn by WebGL (light wrap, rim light, grass around their bases);
+ * The tent, stump and grass strips are drawn by WebGL (light wrap, rim light, wind);
  * their DOM copies below are the no-WebGL fallback.
  * -------------------------------------------------------------------------- */
 const STUMP = { x: 704, y: 648, w: 618, ratio: 1930 / 537, d: 0.8 };
@@ -28,14 +28,25 @@ const SHADOWS = [
   { x: 760, y: 768, w: 520, h: 44, d: 0.8, o: 0.55 },
   { x: 1260, y: 682, w: 660, h: 52, d: 0.72, o: 0.5 },
 ];
-const PATCHES: GrassPatch[] = [
-  // around the stump and its rocks: blades behind are drawn before it, blades in front after
-  { anchor: [1012, 768], scale: [330, 34, 24], width: 1.5, mirror: 1, d: 0.8, wind: 1.0, split: 'around' },
-  // along the tent's floor
-  { anchor: [1560, 712], scale: [380, 30, 18], width: 1.5, mirror: -1, d: 0.72, wind: 0.9, split: 'around' },
-  // the meadow nearer the camera: taller, wider blades
-  { anchor: [600, 836], scale: [440, 48, 42], width: 2.2, mirror: 1, d: 0.95, wind: 1.1, split: 'all' },
-  { anchor: [1240, 878], scale: [540, 60, 30], width: 2.6, mirror: -1, d: 1.05, wind: 1.2, split: 'all' },
+/*
+ * Photographic grass strips (real blades cut from the rock photo) planted along each base.
+ * Order is back → front. `shade` < 1 sits further back, in shadow.
+ */
+const STRIP_RATIO = 9.231;
+type Draw = { tex: TexKey; x: number; y: number; w: number; ratio: number; d: number; strip?: boolean; seed?: number; flip?: boolean; shade?: number; wrap?: number };
+const DRAWS: Draw[] = [
+  // behind the tent and stump: blades rising past their back edges
+  { tex: 'strip', x: 1150, y: 654, w: 760, ratio: STRIP_RATIO, d: 0.71, strip: true, seed: 1.7, shade: 0.8 },
+  { tex: 'strip', x: 690, y: 742, w: 660, ratio: STRIP_RATIO, d: 0.79, strip: true, seed: 4.1, flip: true, shade: 0.82 },
+  { tex: 'tent', x: TENT.x, y: TENT.y, w: TENT.w, ratio: TENT.ratio, d: TENT.d, wrap: 0.55 },
+  // tent floor
+  { tex: 'strip', x: 1130, y: 676, w: 820, ratio: STRIP_RATIO, d: 0.73, strip: true, seed: 2.9 },
+  { tex: 'stump', x: STUMP.x, y: STUMP.y, w: STUMP.w, ratio: STUMP.ratio, d: STUMP.d, wrap: 0.7 },
+  // over the stump's base and rocks: hides the cut-out's grass edge in real grass
+  { tex: 'strip', x: 650, y: 770, w: 720, ratio: STRIP_RATIO, d: 0.82, strip: true, seed: 6.3 },
+  // the near meadow
+  { tex: 'strip', x: -80, y: 818, w: 1100, ratio: STRIP_RATIO, d: 0.97, strip: true, seed: 8.2, flip: true },
+  { tex: 'strip', x: 900, y: 846, w: 1000, ratio: STRIP_RATIO, d: 1.02, strip: true, seed: 3.3 },
 ];
 const MUG: [number, number] = [1128, 654];
 const STEAM_UNIT = 44;
@@ -142,7 +153,6 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     const reduce = prefersReducedMotion();
     const fine = hasFinePointer();
     const target = [0, 0];
-    const pointer: [number, number] = [-9999, -9999];
     let visible = true;
     let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
@@ -171,15 +181,10 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       backR?.render(s, mug, steamUnit);
       if (frontR) {
         const f: FrontFrame = {
-          props: [
-            { tex: 'stump', rect: rectFor(s, STUMP.x, STUMP.y, STUMP.w, STUMP.w / STUMP.ratio, STUMP.d, W, H) },
-            { tex: 'tent', rect: rectFor(s, TENT.x, TENT.y, TENT.w, TENT.w / TENT.ratio, TENT.d, W, H) },
-          ],
+          draws: DRAWS.map<PropDraw>((d) => ({ tex: d.tex, rect: rectFor(s, d.x, d.y, d.w, d.w / d.ratio, d.d, W, H), strip: d.strip, seed: d.seed, flip: d.flip, shade: d.shade, wrap: d.wrap })),
           shadows: SHADOWS.map((sh) => ({ rect: rectFor(s, sh.x, sh.y, sh.w, sh.h, sh.d, W, H), opacity: sh.o })),
-          patches: PATCHES,
           mug,
           steamUnit,
-          pointer: fine ? pointer : [-9999, -9999],
         };
         frontR.render(s, f);
       }
@@ -188,9 +193,6 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
     const onMove = (e: PointerEvent) => {
       target[0] = (e.clientX / window.innerWidth) * 2 - 1;
       target[1] = (e.clientY / window.innerHeight) * 2 - 1;
-      const r = el.getBoundingClientRect();
-      pointer[0] = e.clientX - r.left;
-      pointer[1] = e.clientY - r.top;
     };
 
     let last = performance.now();
@@ -240,17 +242,13 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       const total = 5;
       const track = <T,>(p: Promise<T>) => p.then((v) => (emit('itara:hero-progress', ++done / total), v));
       try {
-        const [img, depth, stump, tent, grass] = await Promise.all([
-          track(loadImage(SRC.plate)),
-          track(loadImage(SRC.depth)),
-          track(loadImage(SRC.stump)),
-          track(loadImage(SRC.tent)),
-          track(fetch(SRC.grass).then((r) => r.arrayBuffer())),
-        ]);
+        const [img, depth, stump, tent, strip] = await Promise.all(
+          [SRC.plate, SRC.depth, SRC.stump, SRC.tent, SRC.strip].map((u) => track(loadImage(u))),
+        );
         if (disposed) return;
         backR = new SceneRenderer(back.current!, img, depth, 0);
         try {
-          frontR = new FrontRenderer(front.current!, { plate: img, depth, blur: blurred(img), stump, tent }, grass);
+          frontR = new FrontRenderer(front.current!, { plate: img, depth, blur: blurred(img), stump, tent, strip });
         } catch (e) {
           console.warn('[hero] front compositor unavailable', e);
         }

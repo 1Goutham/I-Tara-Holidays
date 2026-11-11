@@ -49,11 +49,9 @@ Two canvases share one camera (`camera()` and `layerTransform()` in `components/
 - **Front canvas** (`front.ts` + `composite.ts`), drawn in this order:
   1. The near hills that pass in front of the headline.
   2. Contact shadows.
-  3. 3D grass behind each prop.
-  4. The tent and stump cut-outs, with light wrap, sun rim light, grade and haze.
-  5. 3D grass in front of the props and across the meadow.
-  6. Mug steam.
-- **Grass:** `public/img/hero/grass.bin` is a 3,000-blade fur patch converted from the supplied OBJ (Int16 blade centrelines). It's reused for several patches; each blade takes the meadow colour beneath it and sways in the wind, leaning away from the pointer.
+  3. Photographic cut-outs from back to front (`DRAWS` in `hero-scene.tsx`): grass strips behind the props, the tent, grass along the tent floor, the stump, grass over its base, and the near meadow. Each one gets light wrap, a sun rim light, a grade and haze.
+  4. Mug steam.
+- **Grass:** `public/img/hero/grass-strip.webp` is built from real blades cut out of the rock photo, layered in three rows. The shader adds wind: a gust travels along the strip, the tips move while the roots stay planted, and the strip ends feather out.
 - **DOM layers:** sun (screen-blended), branch (swaying), bushes (defocused foreground) and lantern glows. DOM copies of the tent and stump are the fallback when WebGL is unavailable.
 - **Loader:** a minimal logo loader waits for fonts and the hero assets (at most 6 s).
 

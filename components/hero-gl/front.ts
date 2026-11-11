@@ -1,47 +1,38 @@
 import { FRAG, VERT } from './shader';
-import { GRASS_FRAG, GRASS_VERT, SPRITE_FRAG, SPRITE_VERT } from './composite';
+import { SPRITE_FRAG, SPRITE_VERT } from './composite';
 import { camera, coverFor, PLATE, REST_ZOOM, type SceneState } from './renderer';
 
+export type TexKey = 'stump' | 'tent' | 'strip';
 export interface PropDraw {
-  tex: 'stump' | 'tent';
+  tex: TexKey;
   rect: [number, number, number, number]; // CSS px x, y, w, h (already camera-transformed)
+  strip?: boolean;  // grass strip: wind + feathered edges
+  seed?: number;
+  flip?: boolean;
+  wrap?: number;
+  shade?: number;   // darken (back rows sit in shadow)
 }
 export interface ShadowDraw { rect: [number, number, number, number]; opacity: number }
-export interface GrassPatch {
-  anchor: [number, number];
-  scale: [number, number, number];
-  width: number;
-  mirror: 1 | -1;
-  d: number;
-  wind: number;
-  /** 'back' blades are drawn before the props (behind them), 'front' after, 'all' after */
-  split: 'around' | 'all';
-}
 export interface FrontFrame {
-  props: PropDraw[];
+  /** drawn back to front: hills → shadows → these → steam */
+  draws: PropDraw[];
   shadows: ShadowDraw[];
-  patches: GrassPatch[];
   mug: [number, number];
   steamUnit: number;
-  pointer: [number, number];
 }
 
 type Prog = { p: WebGLProgram; u: Record<string, WebGLUniformLocation | null>; a: Record<string, number> };
 
 /**
  * One WebGL context for everything in front of the headline: near hills, contact shadows,
- * 3D grass (behind and in front of each prop), the cut-out props with light wrap, and steam.
+ * photographic cut-outs (props and wind-driven grass strips) with light wrap, and steam.
  */
 export class FrontRenderer {
   private gl: WebGLRenderingContext;
   private land: Prog;
   private sprite: Prog;
-  private grass: Prog;
   private tri: WebGLBuffer;
   private quad: WebGLBuffer;
-  private grassBuf: WebGLBuffer;
-  private grassIdx: WebGLBuffer;
-  private grassCount: number;
   private tex: Record<string, WebGLTexture> = {};
   private cssW = 0;
   private cssH = 0;
@@ -49,17 +40,14 @@ export class FrontRenderer {
 
   constructor(
     private canvas: HTMLCanvasElement,
-    imgs: { plate: HTMLImageElement; depth: HTMLImageElement; blur: TexImageSource; stump: HTMLImageElement; tent: HTMLImageElement },
-    grass: ArrayBuffer,
+    imgs: { plate: HTMLImageElement; depth: HTMLImageElement; blur: TexImageSource; stump: HTMLImageElement; tent: HTMLImageElement; strip: HTMLImageElement },
   ) {
-    const gl = canvas.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: true, depth: true, powerPreference: 'high-performance' });
+    const gl = canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true, depth: false, powerPreference: 'high-performance' });
     if (!gl) throw new Error('webgl unavailable');
     this.gl = gl;
-    gl.getExtension('OES_element_index_uint');
 
     this.land = this.program(VERT, FRAG, ['aPos'], ['uImg', 'uDepth', 'uRes', 'uDpr', 'uImgRes', 'uCenter', 'uVis', 'uPar', 'uZoom', 'uDolly', 'uTime', 'uScroll', 'uIntro', 'uLayer', 'uSun', 'uMugPx', 'uSteamUnit']);
-    this.sprite = this.program(SPRITE_VERT, SPRITE_FRAG, ['aCorner'], ['uTex', 'uBlur', 'uRect', 'uView', 'uCenter', 'uVis', 'uZoom', 'uSunPx', 'uMode', 'uWrap', 'uRim', 'uHaze', 'uOpacity']);
-    this.grass = this.program(GRASS_VERT, GRASS_FRAG, ['aC', 'aRoot', 'aSide', 'aT', 'aRand'], ['uView', 'uAnchor', 'uScale', 'uWidth', 'uMirror', 'uZRange', 'uRestK', 'uCpx', 'uM', 'uT', 'uTime', 'uWind', 'uPointer', 'uBlur', 'uCenter', 'uVis', 'uZoom', 'uSunPx']);
+    this.sprite = this.program(SPRITE_VERT, SPRITE_FRAG, ['aCorner'], ['uTex', 'uBlur', 'uRect', 'uView', 'uCenter', 'uVis', 'uZoom', 'uSunPx', 'uMode', 'uWrap', 'uRim', 'uHaze', 'uOpacity', 'uTime', 'uSeed', 'uShade']);
 
     this.tri = this.buffer(new Float32Array([-1, -1, 3, -1, -1, 3]));
     this.quad = this.buffer(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
@@ -69,42 +57,7 @@ export class FrontRenderer {
     this.tex.blur = this.texture(imgs.blur, false, gl.RGB);
     this.tex.stump = this.texture(imgs.stump, true, gl.RGBA);
     this.tex.tent = this.texture(imgs.tent, true, gl.RGBA);
-
-    // grass mesh: expand blade centrelines into quad strips
-    const dv = new DataView(grass);
-    const nb = dv.getUint32(0, true);
-    const levels = 7;
-    const verts = new Float32Array(nb * levels * 2 * 8);
-    const idx = new Uint16Array(nb * (levels - 1) * 6);
-    let o = 4;
-    let vi = 0;
-    let ii = 0;
-    for (let b = 0; b < nb; b++) {
-      const pts: number[][] = [];
-      for (let l = 0; l < levels; l++) {
-        pts.push([dv.getInt16(o, true) / 32767, dv.getInt16(o + 2, true) / 32767, dv.getInt16(o + 4, true) / 32767]);
-        o += 6;
-      }
-      const rand = ((Math.sin(b * 12.9898) * 43758.5453) % 1 + 1) % 1;
-      const base = b * levels * 2;
-      for (let l = 0; l < levels; l++) {
-        for (const side of [-1, 1]) {
-          verts.set([pts[l][0], pts[l][1], pts[l][2], pts[0][0], pts[0][2], side, l / (levels - 1), rand], vi);
-          vi += 8;
-        }
-        if (l < levels - 1) {
-          const a = base + l * 2;
-          idx.set([a, a + 1, a + 2, a + 1, a + 3, a + 2], ii);
-          ii += 6;
-        }
-      }
-    }
-    this.grassBuf = this.buffer(verts);
-    this.grassIdx = gl.createBuffer()!;
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.grassIdx);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
-    this.grassCount = idx.length;
-    if (nb * levels * 2 > 65535) throw new Error('grass mesh too large for 16-bit indices');
+    this.tex.strip = this.texture(imgs.strip, true, gl.RGBA);
 
     gl.useProgram(this.land.p);
     gl.uniform1i(this.land.u.uImg, 0);
@@ -197,19 +150,23 @@ export class FrontRenderer {
 
     // 2 · contact shadows
     this.useSprite(W, H, vis, center, cam.zoom, sunPx);
+    gl.uniform1f(this.sprite.u.uTime, s.time);
     for (const sh of f.shadows) this.drawSprite(null, sh.rect, { mode: 1, opacity: sh.opacity });
+
+    // 3 · photographic cut-outs, back to front, composited into the plate's light
+    for (const d of f.draws) {
+      const r = d.flip ? ([d.rect[0] + d.rect[2], d.rect[1], -d.rect[2], d.rect[3]] as [number, number, number, number]) : d.rect;
+      gl.uniform1f(this.sprite.u.uSeed, d.seed ?? 0);
+      this.drawSprite(this.tex[d.tex], r, {
+        mode: d.strip ? 2 : 0,
+        opacity: 1,
+        wrap: d.wrap ?? (d.strip ? 0.5 : 0.6),
+        rim: d.strip ? 0.7 : 0.55,
+        haze: 0.06,
+        shade: d.shade ?? 1,
+      });
+    }
     gl.disableVertexAttribArray(this.sprite.a.aCorner);
-
-    // 3 · grass behind the props
-    this.grassPass(s, f, 'behind', W, H, restK, cpx, vis, center, cam.zoom, sunPx);
-
-    // 4 · props, composited into the plate's light
-    this.useSprite(W, H, vis, center, cam.zoom, sunPx);
-    for (const p of f.props) this.drawSprite(this.tex[p.tex], p.rect, { mode: 0, opacity: 1, wrap: p.tex === 'tent' ? 0.55 : 0.7, rim: 0.55, haze: 0.06 });
-    gl.disableVertexAttribArray(this.sprite.a.aCorner);
-
-    // 5 · grass in front of the props, and the meadow
-    this.grassPass(s, f, 'front', W, H, restK, cpx, vis, center, cam.zoom, sunPx);
 
     // 6 · steam off the mug
     this.landPass(s, 2, f);
@@ -260,7 +217,7 @@ export class FrontRenderer {
     gl.vertexAttribPointer(S.a.aCorner, 2, gl.FLOAT, false, 0, 0);
   }
 
-  private drawSprite(t: WebGLTexture | null, rect: [number, number, number, number], o: { mode: number; opacity: number; wrap?: number; rim?: number; haze?: number }) {
+  private drawSprite(t: WebGLTexture | null, rect: [number, number, number, number], o: { mode: number; opacity: number; wrap?: number; rim?: number; haze?: number; shade?: number }) {
     const gl = this.gl;
     const S = this.sprite;
     if (t) this.bind(0, t);
@@ -270,65 +227,8 @@ export class FrontRenderer {
     gl.uniform1f(S.u.uWrap, o.wrap ?? 0);
     gl.uniform1f(S.u.uRim, o.rim ?? 0);
     gl.uniform1f(S.u.uHaze, o.haze ?? 0);
+    gl.uniform1f(S.u.uShade, o.shade ?? 1);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-
-  private grassPass(s: SceneState, f: FrontFrame, phase: 'behind' | 'front', W: number, H: number, restK: number, cpx: [number, number], vis: [number, number], center: [number, number], zoom: number, sunPx: [number, number]) {
-    const gl = this.gl;
-    const G = this.grass;
-    gl.useProgram(G.p);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LESS);
-    gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.uniform2f(G.u.uView, W, H);
-    gl.uniform1f(G.u.uRestK, restK);
-    gl.uniform2f(G.u.uCpx, cpx[0], cpx[1]);
-    gl.uniform1f(G.u.uTime, s.time);
-    gl.uniform2f(G.u.uPointer, f.pointer[0], f.pointer[1]);
-    gl.uniform1i(G.u.uBlur, 1);
-    gl.uniform2f(G.u.uCenter, center[0], center[1]);
-    gl.uniform2f(G.u.uVis, vis[0], vis[1]);
-    gl.uniform1f(G.u.uZoom, zoom);
-    gl.uniform2f(G.u.uSunPx, sunPx[0], sunPx[1]);
-    this.bind(1, this.tex.blur);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.grassBuf);
-    const stride = 8 * 4;
-    const attr = (name: string, size: number, off: number) => {
-      gl.enableVertexAttribArray(G.a[name]);
-      gl.vertexAttribPointer(G.a[name], size, gl.FLOAT, false, stride, off * 4);
-    };
-    attr('aC', 3, 0);
-    attr('aRoot', 2, 3);
-    attr('aSide', 1, 5);
-    attr('aT', 1, 6);
-    attr('aRand', 1, 7);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.grassIdx);
-
-    const cam = camera(s);
-    for (const p of f.patches) {
-      let range: [number, number];
-      if (phase === 'behind') {
-        if (p.split !== 'around') continue;
-        range = [-1.01, 0];
-      } else {
-        range = p.split === 'around' ? [0, 1.01] : [-1.01, 1.01];
-      }
-      const z = cam.zoom * (1 + cam.dolly * p.d);
-      const m = z / REST_ZOOM;
-      const scl = coverFor(W, H).scale;
-      gl.uniform2f(G.u.uAnchor, p.anchor[0], p.anchor[1]);
-      gl.uniform3f(G.u.uScale, p.scale[0], p.scale[1], p.scale[2]);
-      gl.uniform1f(G.u.uWidth, p.width);
-      gl.uniform1f(G.u.uMirror, p.mirror);
-      gl.uniform2f(G.u.uZRange, range[0], range[1]);
-      gl.uniform1f(G.u.uM, m);
-      gl.uniform2f(G.u.uT, -cam.par[0] * (p.d - 0.3) * PLATE.w * scl * z, -cam.par[1] * (p.d - 0.3) * PLATE.h * scl * z);
-      gl.uniform1f(G.u.uWind, p.wind);
-      gl.drawElements(gl.TRIANGLES, this.grassCount, gl.UNSIGNED_SHORT, 0);
-    }
-    ['aC', 'aRoot', 'aSide', 'aT', 'aRand'].forEach((n) => gl.disableVertexAttribArray(G.a[n]));
-    gl.disable(gl.DEPTH_TEST);
   }
 
   dispose() {
