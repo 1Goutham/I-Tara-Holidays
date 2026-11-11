@@ -3,158 +3,161 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useSite } from './providers';
+import { gsap, getLenis, ScrollTrigger } from '@/lib/gsap';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
-/** Branded loading screen; releases the page (and all reveals) once loaded. */
+/** Counter preloader; the panel lifts away, then the page (and its reveals) is released. */
 export function Preloader() {
   const { setReady } = useSite();
-  const [done, setDone] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const num = useRef<HTMLSpanElement>(null);
+  const bar = useRef<HTMLSpanElement>(null);
+  const [gone, setGone] = useState(false);
 
   useEffect(() => {
-    const reduce = prefersReducedMotion();
     document.body.classList.add('is-loading');
-    let released = false;
-    const timers: ReturnType<typeof setTimeout>[] = [];
     const release = () => {
-      if (released) return;
-      released = true;
-      setDone(true);
       document.body.classList.remove('is-loading');
       document.body.classList.add('is-ready');
-      timers.push(setTimeout(() => setReady(true), reduce ? 0 : 350));
+      getLenis()?.start();
+      setReady(true);
     };
-    const onLoad = () => timers.push(setTimeout(release, reduce ? 0 : 900));
-    if (document.readyState === 'complete') onLoad();
-    else window.addEventListener('load', onLoad, { once: true });
-    timers.push(setTimeout(release, 3200)); // never block on slow images
+    if (prefersReducedMotion()) {
+      setGone(true);
+      release();
+      return;
+    }
+
+    const counter = { v: 0 };
+    let loaded = document.readyState === 'complete';
+    const onLoad = () => (loaded = true);
+    window.addEventListener('load', onLoad, { once: true });
+
+    const tl = gsap.timeline({ paused: true });
+    tl.to(counter, {
+      v: 100,
+      duration: 2.2,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        if (num.current) num.current.textContent = String(Math.round(counter.v)).padStart(3, '0');
+        if (bar.current) bar.current.style.transform = `scaleX(${counter.v / 100})`;
+      },
+    })
+      .to('.preloader__inner', { autoAlpha: 0, y: -20, duration: 0.6, ease: 'power2.in' }, '+=0.15')
+      .to(root.current, { yPercent: -100, duration: 1.2, ease: 'expo.inOut' }, '-=0.2')
+      .add(release, '-=0.85')
+      .add(() => setGone(true));
+
+    // start once fonts are in (max 1.2s wait) so the first frame is typographically correct
+    const start = () => tl.play();
+    const t = setTimeout(start, 1200);
+    document.fonts?.ready.then(() => {
+      clearTimeout(t);
+      start();
+    });
+    // never hold the page longer than 5s on slow images
+    const guard = setTimeout(() => {
+      if (!loaded) tl.timeScale(2);
+    }, 3000);
+
     return () => {
+      clearTimeout(t);
+      clearTimeout(guard);
       window.removeEventListener('load', onLoad);
-      timers.forEach(clearTimeout);
+      tl.kill();
     };
   }, [setReady]);
 
+  if (gone) return null;
   return (
-    <div className={`preloader${done ? ' is-done' : ''}`} aria-hidden="true">
+    <div className="preloader" ref={root} aria-hidden="true">
       <div className="preloader__inner">
-        <Image src="/img/mark.png" alt="" width={120} height={120} priority />
-        <span className="preloader__word">I Tara</span>
-        <span className="preloader__bar"><i /></span>
+        <Image src="/img/wordmark.png" alt="" width={260} height={76} priority className="preloader__logo" />
+        <div className="preloader__foot">
+          <span className="preloader__label">Preparing your journey</span>
+          <span className="preloader__num" ref={num}>000</span>
+        </div>
+        <span className="preloader__bar"><span ref={bar} /></span>
       </div>
     </div>
   );
 }
 
-/** Scroll progress bar, parallax layers and the `is-scrolled` body flag. */
-export function ScrollEffects() {
+/** Thin page-progress hairline. */
+export function ScrollProgress() {
   const bar = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const reduce = prefersReducedMotion();
-    let ticking = false;
-    const update = () => {
-      const y = window.scrollY;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (bar.current) bar.current.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
-      document.body.classList.toggle('is-scrolled', y > 400);
-      if (!reduce) {
-        document.querySelectorAll<HTMLElement>('[data-parallax]').forEach((el) => {
-          const r = el.parentElement!.getBoundingClientRect();
-          if (r.bottom < 0 || r.top > window.innerHeight) return;
-          const offset = (r.top + r.height / 2 - window.innerHeight / 2) * -parseFloat(el.dataset.parallax || '0');
-          el.style.transform = `translate3d(0,${offset.toFixed(1)}px,0)`;
-        });
-      }
-      ticking = false;
-    };
-    const onScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(update);
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    update();
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-    };
+    const st = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (s) => {
+        if (bar.current) bar.current.style.transform = `scaleX(${s.progress})`;
+        document.body.classList.toggle('is-scrolled', s.scroll() > 500);
+      },
+    });
+    return () => st.kill();
   }, []);
-
   return <div className="progress" ref={bar} aria-hidden="true" />;
 }
 
-/** Custom cursor and magnetic buttons (.magnetic) — fine pointers only. */
-export function PointerEffects() {
-  const cursor = useRef<HTMLDivElement>(null);
+/** Context cursor: only appears as a labelled disc over elements with data-cursor="View". */
+export function Cursor() {
+  const el = useRef<HTMLDivElement>(null);
+  const [label, setLabel] = useState('');
+  const [on, setOn] = useState(false);
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     if (!hasFinePointer() || prefersReducedMotion()) return;
     setEnabled(true);
-
-    let cx = -100, cy = -100, tx = -100, ty = -100, raf = 0;
-    let magnet: HTMLElement | null = null;
-    let tilt: HTMLElement | null = null;
-
-    const loop = () => {
-      cx += (tx - cx) * 0.2;
-      cy += (ty - cy) * 0.2;
-      if (cursor.current) cursor.current.style.transform = `translate3d(${cx}px,${cy}px,0)`;
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-
-    const onMove = (e: PointerEvent) => {
-      tx = e.clientX;
-      ty = e.clientY;
-      const t = e.target as Element | null;
-
-      const m = t?.closest<HTMLElement>('.magnetic') ?? null;
-      if (magnet && magnet !== m) magnet.style.transform = '';
-      magnet = m;
-      if (m) {
-        const r = m.getBoundingClientRect();
-        m.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * 0.18).toFixed(1)}px,${((e.clientY - r.top - r.height / 2) * 0.28).toFixed(1)}px)`;
-      }
-
-      const c = t?.closest<HTMLElement>('.tilt') ?? null;
-      if (tilt && tilt !== c) tilt.style.transform = '';
-      tilt = c;
-      if (c) {
-        const r = c.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        c.style.transform = `perspective(900px) rotateX(${(-y * 8).toFixed(2)}deg) rotateY(${(x * 10).toFixed(2)}deg) translateY(-6px)`;
-      }
-    };
-    const onOver = (e: PointerEvent) => {
-      const hover = !!(e.target as Element | null)?.closest('a, button, input, select, textarea, label');
-      cursor.current?.classList.toggle('is-hover', hover);
-    };
-    const onLeave = () => {
-      if (magnet) magnet.style.transform = '';
-      if (tilt) tilt.style.transform = '';
-      magnet = tilt = null;
-    };
-
-    window.addEventListener('pointermove', onMove, { passive: true });
-    document.addEventListener('pointerover', onOver);
-    document.documentElement.addEventListener('pointerleave', onLeave);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerover', onOver);
-      document.documentElement.removeEventListener('pointerleave', onLeave);
-    };
   }, []);
+
+  useEffect(() => {
+    if (!enabled || !el.current) return;
+    const xTo = gsap.quickTo(el.current, 'x', { duration: 0.5, ease: 'power3' });
+    const yTo = gsap.quickTo(el.current, 'y', { duration: 0.5, ease: 'power3' });
+    const move = (e: PointerEvent) => {
+      xTo(e.clientX);
+      yTo(e.clientY);
+    };
+    const over = (e: PointerEvent) => {
+      const t = (e.target as Element | null)?.closest<HTMLElement>('[data-cursor]');
+      setOn(!!t);
+      if (t) setLabel(t.dataset.cursor || '');
+    };
+    window.addEventListener('pointermove', move, { passive: true });
+    document.addEventListener('pointerover', over);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerover', over);
+    };
+  }, [enabled]);
 
   if (!enabled) return null;
   return (
-    <div className="cursor" ref={cursor} aria-hidden="true">
-      <span />
+    <div className={`cursor${on ? ' is-on' : ''}`} ref={el} aria-hidden="true">
+      <span>{label}</span>
     </div>
   );
+}
+
+/** Subtle magnetic pull for elements with .magnetic (fine pointers only). */
+export function Magnetic() {
+  useEffect(() => {
+    if (!hasFinePointer() || prefersReducedMotion()) return;
+    let active: HTMLElement | null = null;
+    const move = (e: PointerEvent) => {
+      const m = (e.target as Element | null)?.closest<HTMLElement>('.magnetic') ?? null;
+      if (active && active !== m) gsap.to(active, { x: 0, y: 0, duration: 0.8, ease: 'elastic.out(1, 0.4)' });
+      active = m;
+      if (!m) return;
+      const r = m.getBoundingClientRect();
+      gsap.to(m, { x: (e.clientX - r.left - r.width / 2) * 0.25, y: (e.clientY - r.top - r.height / 2) * 0.35, duration: 0.5, ease: 'power3.out' });
+    };
+    window.addEventListener('pointermove', move, { passive: true });
+    return () => window.removeEventListener('pointermove', move);
+  }, []);
+  return null;
 }
 
 export function Toast() {
@@ -164,4 +167,9 @@ export function Toast() {
       {toastState.msg}
     </div>
   );
+}
+
+/** Film-grain overlay for a tactile, printed feel. */
+export function Grain() {
+  return <div className="grain" aria-hidden="true" />;
 }

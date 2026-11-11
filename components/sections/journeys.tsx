@@ -1,152 +1,115 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSite } from '../providers';
 import { Img } from '../ui/img';
-import { Reveal } from '../ui/reveal';
-import { SplitHeading } from '../ui/split-heading';
-import { HeartIcon } from '../icons';
 import { packages, type Category } from '@/lib/data';
 import { inr } from '@/lib/site';
-import { prefersReducedMotion, useScrollProgress } from '@/lib/motion';
+import { gsap, scrollToId, useGSAP } from '@/lib/gsap';
+import { prefersReducedMotion } from '@/lib/motion';
 
 type Filter = 'all' | Category;
 const filters: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'india', label: 'India' },
-  { value: 'world', label: 'World' },
+  { value: 'world', label: 'International' },
   { value: 'honeymoon', label: 'Honeymoon' },
 ];
-const FAV_KEY = 'itara:favs';
+const count = (f: Filter) => packages.filter((p) => f === 'all' || p.cat.includes(f)).length;
 
-/** Vertical scroll drives a horizontal track while the section is pinned (desktop). */
+/** Pinned horizontal gallery (desktop): vertical scroll moves the track, images drift inside their frames. */
 export function Journeys() {
-  const { prefill, toast } = useSite();
+  const { prefill } = useSite();
   const [filter, setFilter] = useState<Filter>('all');
-  const [favs, setFavs] = useState<string[]>([]);
-  const [pinned, setPinned] = useState(false);
-  const [height, setHeight] = useState<number | undefined>();
+  const root = useRef<HTMLElement>(null);
   const track = useRef<HTMLDivElement>(null);
-  const bar = useRef<HTMLSpanElement>(null);
-  const distance = useRef(0);
-
   const list = packages.filter((p) => filter === 'all' || p.cat.includes(filter));
 
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
-      if (Array.isArray(saved)) setFavs(saved);
-    } catch {}
-  }, []);
-
-  // Decide whether to pin, and size the section so the scroll distance equals the track overflow.
-  useEffect(() => {
-    const measure = () => {
-      const el = track.current;
-      if (!el) return;
-      const can = window.innerWidth >= 1024 && !prefersReducedMotion();
-      setPinned(can);
-      if (!can) {
-        setHeight(undefined);
-        el.style.transform = '';
-        return;
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+        const el = track.current!;
+        const distance = () => el.scrollWidth - el.clientWidth;
+        const move = gsap.to(el, {
+          x: () => -distance(),
+          ease: 'none',
+          scrollTrigger: {
+            trigger: root.current,
+            start: 'top top',
+            end: () => `+=${distance()}`,
+            pin: true,
+            scrub: 1,
+            invalidateOnRefresh: true,
+            onUpdate: (s) => gsap.set('.journeys__bar', { scaleX: s.progress }),
+          },
+        });
+        gsap.utils.toArray<HTMLElement>('.journey__media img', el).forEach((img) => {
+          gsap.fromTo(img, { xPercent: -8 }, {
+            xPercent: 8,
+            ease: 'none',
+            scrollTrigger: { trigger: img.parentElement, containerAnimation: move, start: 'left right', end: 'right left', scrub: true },
+          });
+        });
+      });
+      // card entrance (any viewport)
+      if (!prefersReducedMotion()) {
+        gsap.from('.journey', { autoAlpha: 0, y: 40, duration: 1.2, stagger: 0.07, ease: 'power3.out', scrollTrigger: { trigger: track.current, start: 'top 85%', once: true } });
       }
-      distance.current = Math.max(0, el.scrollWidth - el.clientWidth);
-      setHeight(window.innerHeight + distance.current);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [list.length]);
+      return () => mm.revert();
+    },
+    { scope: root, dependencies: [filter], revertOnUpdate: true },
+  );
 
-  const section = useScrollProgress<HTMLElement>((p) => {
-    if (bar.current) bar.current.style.transform = `scaleX(${pinned ? p : 1})`;
-    if (!pinned || !track.current) return;
-    track.current.style.transform = `translate3d(${(-p * distance.current).toFixed(1)}px,0,0)`;
-  }, 'pin');
-
-  const toggleFav = (title: string) => {
-    const on = !favs.includes(title);
-    const next = on ? [...favs, title] : favs.filter((t) => t !== title);
-    setFavs(next);
-    try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch {}
-    toast(on ? 'Saved to your wishlist' : 'Removed from your wishlist');
+  const enquire = (title: string, days: string) => {
+    prefill({ destination: title, message: `I'm interested in ${title} (${days}). Please share an itinerary and quote.` }, true);
+    scrollToId('contact');
   };
 
   return (
-    <section className={`journeys${pinned ? ' is-pinned' : ''}`} id="journeys" ref={section} style={{ height }}>
-      <div className="journeys__stick">
+    <section className="journeys" id="journeys" ref={root} data-theme="light">
+      <div className="journeys__inner">
         <div className="container journeys__head">
           <div>
-            <Reveal as="p" className="kicker">Signature journeys</Reveal>
-            <SplitHeading lines={['Holidays planned to the', 'last *little* detail.']} />
+            <p className="label" data-fade>(02) Signature journeys</p>
+            <h2 className="h2" data-split>Holidays planned to the <em>last</em> detail.</h2>
           </div>
-          <Reveal className="chips" role="tablist" aria-label="Filter journeys">
+          <div className="tabs" data-fade role="tablist" aria-label="Filter journeys">
             {filters.map((f) => (
-              <button
-                key={f.value}
-                role="tab"
-                aria-selected={filter === f.value}
-                className={filter === f.value ? 'is-active' : undefined}
-                onClick={() => {
-                  setFilter(f.value);
-                  window.dispatchEvent(new Event('scroll'));
-                }}
-              >
-                {f.label}
+              <button key={f.value} role="tab" aria-selected={filter === f.value} className={filter === f.value ? 'is-active' : undefined} onClick={() => setFilter(f.value)}>
+                {f.label}<sup>{count(f.value)}</sup>
               </button>
             ))}
-          </Reveal>
-        </div>
-
-        <div className="journeys__viewport">
-          <div className="journeys__track" ref={track}>
-            {list.map((p, i) => {
-              const fav = favs.includes(p.title);
-              return (
-                <Reveal as="article" className="journey" key={p.title} delay={Math.min(i, 4) * 90}>
-                  <div className="journey__media">
-                    <Img src={p.img} alt={p.title} fill sizes="(max-width: 1024px) 78vw, 360px" />
-                    <span className="journey__tag">{p.tag}</span>
-                    <button
-                      type="button"
-                      className={`journey__fav${fav ? ' is-on' : ''}`}
-                      aria-pressed={fav}
-                      aria-label={`Save ${p.title}`}
-                      onClick={() => toggleFav(p.title)}
-                    >
-                      <HeartIcon />
-                    </button>
-                  </div>
-                  <div className="journey__body">
-                    <small>{p.place}</small>
-                    <h3>{p.title}</h3>
-                    <div className="journey__foot">
-                      <span>{p.days} · <b>{inr(p.price)}</b></span>
-                      <a
-                        href="#contact"
-                        className="journey__go"
-                        aria-label={`Enquire about ${p.title}`}
-                        onClick={() => prefill({ destination: p.title, message: `I'm interested in ${p.title} (${p.days}). Please share an itinerary and quote.` }, true)}
-                      >
-                        →
-                      </a>
-                    </div>
-                  </div>
-                </Reveal>
-              );
-            })}
-            <a href="#contact" className="journey journey--custom">
-              <span className="journey--custom__ring" aria-hidden="true">+</span>
-              <h3>Something <em className="script">else</em> in mind?</h3>
-              <p>Tell us your dream and we will design it from scratch.</p>
-            </a>
           </div>
         </div>
 
-        <div className="container journeys__progress" aria-hidden="true">
-          <span ref={bar} />
+        <div className="journeys__track" ref={track}>
+          {list.map((p, i) => (
+            <article className="journey" key={p.title}>
+              <button className="journey__media" data-cursor="Enquire" onClick={() => enquire(p.title, p.days)} aria-label={`Enquire about ${p.title}`}>
+                <Img src={p.img} alt="" fill sizes="(max-width: 1024px) 80vw, 30vw" />
+              </button>
+              <div className="journey__meta">
+                <span>{String(i + 1).padStart(2, '0')}</span>
+                <span>{p.days}</span>
+              </div>
+              <h3>{p.title}</h3>
+              <p>{p.place}</p>
+              <div className="journey__foot">
+                <span>From <b>{inr(p.price)}</b> pp</span>
+                <button className="link link--sm" onClick={() => enquire(p.title, p.days)}>Enquire</button>
+              </div>
+            </article>
+          ))}
+          <a href="#contact" className="journey journey--custom">
+            <span className="label">Bespoke</span>
+            <h3>Have something else <em>in mind?</em></h3>
+            <p>Tell us how you like to travel and we will design the journey from a blank page.</p>
+            <span className="link">Start a conversation</span>
+          </a>
         </div>
+
+        <div className="container journeys__progress" aria-hidden="true"><span className="journeys__bar" /></div>
       </div>
     </section>
   );

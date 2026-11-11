@@ -22,26 +22,28 @@ Type-check only: `npm run typecheck`
 
 ```
 app/
-  layout.tsx           fonts (next/font), metadata, Open Graph, JSON-LD
+  layout.tsx           fonts (Instrument Serif + Inter Tight via next/font), metadata, JSON-LD
   page.tsx             home page composition
-  globals.css          design tokens, components, animations, responsive rules
+  globals.css          design tokens, type scale, layout, components, responsive rules
   api/enquiry/route.ts validates enquiries / newsletter sign-ups and forwards them
-  sitemap.ts, robots.ts, icon.png, apple-icon.png, not-found.tsx
 components/
-  providers.tsx        shared state: preloader ready flag, toast, enquiry prefill, modal
-  effects.tsx          preloader, scroll progress + parallax, cursor, magnetic buttons
-  illustrations.tsx    hand-built SVG art: hero dawn scene, lotus, line icons, footer wave
-  ui/                  Reveal, SplitHeading, Counter, Img (next/image with fallback)
-  sections/            header, hero, ticker, statement, journeys (pinned horizontal scroll),
-                       experiences list, destination arches, flow (scroll-drawn flight path),
-                       services, stories, contact, footer
+  motion/              smooth-scroll.tsx (Lenis synced to the GSAP ticker), reveals.tsx (data-attribute reveals)
+  effects.tsx          counter preloader, progress hairline, context cursor, magnetic buttons, grain
+  illustrations.tsx    layered dawn landscape + gold line-art panorama
+  sections/            hero (pinned parallax), intro, journeys (pinned horizontal), experiences,
+                       panorama, destinations, flow (scroll-drawn route), services, stories, contact, footer
 lib/
-  site.ts              brand name, phone, email, WhatsApp, socials, nav
-  data.ts              packages, destinations, travel styles, services, testimonials, gallery
-  motion.ts            useReveal / useScrollProgress hooks + reduced-motion / pointer helpers
-  submit.ts            client form submission helper
-public/img/            logo assets
+  landscape.ts         seeded ridge generator (deterministic, so SSR and client match)
+  gsap.ts              GSAP + ScrollTrigger + SplitText registration, Lenis handle, scrollToId
+  site.ts · data.ts    brand/contact details · content
+public/img/            logo mark and wordmarks (dark + light)
 ```
+
+### Motion conventions
+Add these attributes to markup and `components/motion/reveals.tsx` animates them:
+`data-split` (lines rise out of a mask), `data-fade` (soft rise, siblings staggered),
+`data-img` (clip wipe and settle) and `data-rule` (hairline draws in).
+All motion is disabled for visitors who prefer reduced motion.
 
 ## Before going live
 

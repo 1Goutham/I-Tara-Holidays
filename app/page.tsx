@@ -1,11 +1,13 @@
 import { Providers } from '@/components/providers';
-import { PointerEffects, Preloader, ScrollEffects, Toast } from '@/components/effects';
+import { Cursor, Grain, Magnetic, Preloader, ScrollProgress, Toast } from '@/components/effects';
+import { SmoothScroll } from '@/components/motion/smooth-scroll';
+import { Reveals } from '@/components/motion/reveals';
 import { Header } from '@/components/sections/header';
 import { Hero } from '@/components/sections/hero';
-import { Ticker } from '@/components/sections/ticker';
-import { Statement } from '@/components/sections/statement';
+import { Intro } from '@/components/sections/intro';
 import { Journeys } from '@/components/sections/journeys';
-import { StylesList } from '@/components/sections/styles-list';
+import { Experiences } from '@/components/sections/experiences';
+import { Panorama } from '@/components/sections/panorama';
 import { Destinations } from '@/components/sections/destinations';
 import { Flow } from '@/components/sections/flow';
 import { Services } from '@/components/sections/services';
@@ -17,16 +19,19 @@ export default function HomePage() {
   return (
     <Providers>
       <a className="skip-link" href="#main">Skip to content</a>
+      <SmoothScroll />
       <Preloader />
-      <ScrollEffects />
-      <PointerEffects />
+      <ScrollProgress />
+      <Cursor />
+      <Magnetic />
+      <Grain />
       <Header />
       <main id="main">
         <Hero />
-        <Ticker />
-        <Statement />
+        <Intro />
         <Journeys />
-        <StylesList />
+        <Experiences />
+        <Panorama />
         <Destinations />
         <Flow />
         <Services />
@@ -34,6 +39,7 @@ export default function HomePage() {
         <Contact />
       </main>
       <Footer />
+      <Reveals />
       <Toast />
     </Providers>
   );

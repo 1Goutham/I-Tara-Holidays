@@ -1,26 +1,41 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Reveal } from '../ui/reveal';
-import { Lotus } from '../illustrations';
 import { testimonials } from '@/lib/data';
+import { gsap, SplitText } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
 export function Stories() {
   const [index, setIndex] = useState(0);
+  const quote = useRef<HTMLQuoteElement>(null);
   const timer = useRef<ReturnType<typeof setInterval>>(undefined);
+  const first = useRef(true);
   const n = testimonials.length;
+  const t = testimonials[index];
 
-  const stop = () => clearInterval(timer.current);
   const start = useCallback(() => {
     clearInterval(timer.current);
-    if (!prefersReducedMotion()) timer.current = setInterval(() => setIndex((i) => (i + 1) % n), 7000);
+    if (!prefersReducedMotion()) timer.current = setInterval(() => setIndex((i) => (i + 1) % n), 8000);
   }, [n]);
-
   useEffect(() => {
     start();
-    return stop;
+    return () => clearInterval(timer.current);
   }, [start]);
+
+  // animate each new quote in, line by line
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!quote.current || prefersReducedMotion()) return;
+    const split = SplitText.create(quote.current, { type: 'lines', mask: 'lines' });
+    const tw = gsap.from(split.lines, { yPercent: 110, duration: 1.1, stagger: 0.07, onComplete: () => split.revert() });
+    return () => {
+      tw.kill();
+      split.revert();
+    };
+  }, [index]);
 
   const go = (i: number) => {
     setIndex((i + n) % n);
@@ -28,31 +43,20 @@ export function Stories() {
   };
 
   return (
-    <section className="stories section" id="stories">
-      <div className="container container--narrow">
-        <Reveal className="stories__inner" onMouseEnter={stop} onMouseLeave={start} aria-roledescription="carousel" aria-label="Traveller stories">
-          <Lotus className="stories__lotus" />
-          <div className="stories__viewport">
-            {testimonials.map((t, i) => (
-              <figure className={`quote${i === index ? ' is-active' : ''}`} key={t.name} aria-hidden={i !== index}>
-                <blockquote>{t.quote}</blockquote>
-                <figcaption>
-                  <b>{t.name}</b>
-                  <span>{t.trip}</span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-          <div className="stories__nav">
-            <button className="round" aria-label="Previous story" onClick={() => go(index - 1)}>←</button>
-            <div className="stories__dots" role="tablist">
-              {testimonials.map((t, i) => (
-                <button key={t.name} role="tab" aria-selected={i === index} aria-label={`Story ${i + 1}`} className={i === index ? 'is-active' : undefined} onClick={() => go(i)} />
-              ))}
-            </div>
-            <button className="round" aria-label="Next story" onClick={() => go(index + 1)}>→</button>
-          </div>
-        </Reveal>
+    <section className="stories section" id="stories" data-theme="light">
+      <div className="container stories__grid">
+        <p className="label" data-fade>(07) Traveller stories</p>
+        <figure className="stories__fig" data-fade onMouseEnter={() => clearInterval(timer.current)} onMouseLeave={start}>
+          <blockquote ref={quote} key={index}>“{t.quote}”</blockquote>
+          <figcaption>
+            <span><b>{t.name}</b> · {t.trip}</span>
+            <span className="stories__nav">
+              <button aria-label="Previous story" onClick={() => go(index - 1)}>←</button>
+              <span>{String(index + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}</span>
+              <button aria-label="Next story" onClick={() => go(index + 1)}>→</button>
+            </span>
+          </figcaption>
+        </figure>
       </div>
     </section>
   );

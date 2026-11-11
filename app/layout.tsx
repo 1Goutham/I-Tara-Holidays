@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Allura, Fraunces, Manrope } from 'next/font/google';
+import { Instrument_Serif, Inter_Tight } from 'next/font/google';
 import { site } from '@/lib/site';
 import './globals.css';
 
-const display = Fraunces({ subsets: ['latin'], axes: ['opsz'], variable: '--font-display', display: 'swap' });
-const body = Manrope({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
-const script = Allura({ subsets: ['latin'], weight: '400', variable: '--font-script', display: 'swap' });
+const display = Instrument_Serif({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
+const body = Inter_Tight({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -49,7 +48,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${script.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
       <head>
         {/* Enables reveal styles only when JS runs, so content stays visible without it */}
         <script dangerouslySetInnerHTML={{ __html: 'document.documentElement.classList.add("js")' }} />

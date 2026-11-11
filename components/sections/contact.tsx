@@ -2,11 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import { emptyEnquiry, useSite, type EnquiryState } from '../providers';
-import { Lotus } from '../illustrations';
-import { Reveal } from '../ui/reveal';
-import { SplitHeading } from '../ui/split-heading';
-import { ClockIcon, MailIcon, PhoneIcon } from '../icons';
 import { site } from '@/lib/site';
+import { destinationOptions } from '@/lib/data';
 import { submitForm } from '@/lib/submit';
 
 type Field = keyof EnquiryState;
@@ -63,66 +60,64 @@ export function Contact() {
   };
 
   return (
-    <section className="contact section" id="contact">
-      <div className="container">
-        <div className="contact__card">
-          <div className="contact__copy">
-            <Reveal as="p" className="kicker">Let&apos;s begin</Reveal>
-            <SplitHeading lines={['Your next adventure', '*awaits.*']} />
-            <Reveal as="p" className="contact__lead">
-              Share a few details and a travel specialist will send a personalised, fully priced itinerary within 24 hours. No cost, no obligation.
-            </Reveal>
-            <Reveal as="ul" className="contact__list">
-              <li><PhoneIcon /><a href={site.phoneHref}>{site.phoneDisplay}</a></li>
-              <li><MailIcon /><a href={`mailto:${site.email}`}>{site.email}</a></li>
-              <li><ClockIcon />{site.hours}</li>
-            </Reveal>
-            <div className="contact__art" aria-hidden="true">
-              <span className="contact__sun" />
-              <Lotus className="contact__lotus" />
-            </div>
-          </div>
-
-          <Reveal as="form" variant="right" className="enquiry" onSubmit={onSubmit} noValidate aria-label="Holiday enquiry">
-            <div className="enquiry__row">
-              <label className={cls('name')}>
-                <input id="enq-name" type="text" placeholder=" " autoComplete="name" required value={f.name} onChange={(e) => set('name', e.target.value)} onBlur={() => blur('name')} aria-invalid={!!errors.name} />
-                <span>Full name</span>
-              </label>
-              <label className={cls('phone')}>
-                <input id="enq-phone" type="tel" placeholder=" " autoComplete="tel" required value={f.phone} onChange={(e) => set('phone', e.target.value)} onBlur={() => blur('phone')} aria-invalid={!!errors.phone} />
-                <span>Phone</span>
-              </label>
-            </div>
-            <label className={cls('email')}>
-              <input id="enq-email" type="email" placeholder=" " autoComplete="email" required value={f.email} onChange={(e) => set('email', e.target.value)} onBlur={() => blur('email')} aria-invalid={!!errors.email} />
-              <span>Email</span>
-            </label>
-            <div className="enquiry__row">
-              <label className="ffield">
-                <input type="text" placeholder=" " list="dest-list" value={f.destination} onChange={(e) => set('destination', e.target.value)} />
-                <span>Destination</span>
-              </label>
-              <label className="ffield">
-                <input type="month" placeholder=" " value={f.date} onChange={(e) => set('date', e.target.value)} />
-                <span className="is-up">Travel month</span>
-              </label>
-            </div>
-            <label className="ffield">
-              <textarea rows={3} placeholder=" " value={f.message} onChange={(e) => set('message', e.target.value)} />
-              <span>Tell us about your dream trip</span>
-            </label>
-            <label className={cls('consent', 'check')}>
-              <input id="enq-consent" type="checkbox" checked={f.consent} onChange={(e) => set('consent', e.target.checked)} />
-              <span>I agree to be contacted by I Tara about my enquiry.</span>
-            </label>
-            <button className={`btn btn--dark btn--block magnetic${sending ? ' is-loading' : ''}`} type="submit" disabled={sending}>
-              <span>{sending ? 'Sending' : 'Send enquiry'}</span>
-              <i className="btn__arrow" aria-hidden="true">→</i>
-            </button>
-            <p className="enquiry__note">We never share your details. Typical reply time is under 2 hours.</p>
-          </Reveal>
+    <section className="contact" id="contact" data-theme="dark">
+      <div className="container contact__grid">
+        <div className="contact__copy">
+          <p className="label" data-fade>(08) Begin</p>
+          <h2 className="h2" data-split>Tell us where you would like to <em>wake up.</em></h2>
+          <p className="contact__lead" data-fade>
+            Share a few details and a travel specialist will send a personalised, fully priced itinerary within 24 hours. There is no cost and no obligation.
+          </p>
+          <dl className="contact__list" data-fade>
+            <div><dt>Call</dt><dd><a href={site.phoneHref}>{site.phoneDisplay}</a></dd></div>
+            <div><dt>Write</dt><dd><a href={`mailto:${site.email}`}>{site.email}</a></dd></div>
+            <div><dt>Hours</dt><dd>{site.hours}</dd></div>
+          </dl>
         </div>
+
+        <form className="enquiry" onSubmit={onSubmit} noValidate aria-label="Holiday enquiry" data-fade>
+          <div className="enquiry__row">
+            <label className={cls('name')}>
+              <input id="enq-name" type="text" placeholder=" " autoComplete="name" required value={f.name} onChange={(e) => set('name', e.target.value)} onBlur={() => blur('name')} aria-invalid={!!errors.name} />
+              <span>Full name</span>
+            </label>
+            <label className={cls('phone')}>
+              <input id="enq-phone" type="tel" placeholder=" " autoComplete="tel" required value={f.phone} onChange={(e) => set('phone', e.target.value)} onBlur={() => blur('phone')} aria-invalid={!!errors.phone} />
+              <span>Phone</span>
+            </label>
+          </div>
+          <label className={cls('email')}>
+            <input id="enq-email" type="email" placeholder=" " autoComplete="email" required value={f.email} onChange={(e) => set('email', e.target.value)} onBlur={() => blur('email')} aria-invalid={!!errors.email} />
+            <span>Email</span>
+          </label>
+          <div className="enquiry__row">
+            <label className="ffield">
+              <input type="text" placeholder=" " list="dest-list" value={f.destination} onChange={(e) => set('destination', e.target.value)} />
+              <span>Destination</span>
+            </label>
+            <label className="ffield">
+              <input type="month" placeholder=" " value={f.date} onChange={(e) => set('date', e.target.value)} />
+              <span className="is-up">Travel month</span>
+            </label>
+          </div>
+          <datalist id="dest-list">
+            {destinationOptions.map((d) => <option key={d} value={d} />)}
+          </datalist>
+          <label className="ffield">
+            <textarea rows={3} placeholder=" " value={f.message} onChange={(e) => set('message', e.target.value)} />
+            <span>Tell us about the trip you have in mind</span>
+          </label>
+          <label className={cls('consent', 'check')}>
+            <input id="enq-consent" type="checkbox" checked={f.consent} onChange={(e) => set('consent', e.target.checked)} />
+            <span>I agree to be contacted by I Tara about my enquiry.</span>
+          </label>
+          <div className="enquiry__foot">
+            <button className={`btn btn--light magnetic${sending ? ' is-loading' : ''}`} type="submit" disabled={sending}>
+              <span>{sending ? 'Sending' : 'Send enquiry'}</span>
+            </button>
+            <p className="enquiry__note">We never share your details. Typical reply time is under two hours.</p>
+          </div>
+        </form>
       </div>
     </section>
   );

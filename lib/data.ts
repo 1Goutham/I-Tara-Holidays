@@ -29,16 +29,13 @@ export const packages: Package[] = [
 ];
 
 export const destinations = [
-  { name: 'Kashmir', region: 'India', from: 32999, img: unsplash('1595815771614-ade9d652a65d') },
-  { name: 'Kerala', region: 'India', from: 24999, img: unsplash('1602216056096-3b40cc0c9944') },
-  { name: 'Rajasthan', region: 'India', from: 28999, img: unsplash('1599661046289-e31897846e41') },
-  { name: 'Maldives', region: 'Indian Ocean', from: 89999, img: unsplash('1514282401047-d79a71a590e8') },
-  { name: 'Thailand', region: 'Southeast Asia', from: 39999, img: unsplash('1552465011-b4e21bf6e79a') },
-  { name: 'Bhutan', region: 'Himalayas', from: 49999, img: unsplash('1553856622-d1b352e9a211') },
-  { name: 'Santorini', region: 'Greece', from: 149999, img: unsplash('1570077188670-e3a8d69ac5ff') },
-  { name: 'Vietnam', region: 'Southeast Asia', from: 59999, img: unsplash('1528127269322-539801943592') },
-  { name: 'Paris', region: 'France', from: 129999, img: unsplash('1502602898657-3e91760cbb34') },
-  { name: 'Singapore', region: 'Southeast Asia', from: 52999, img: unsplash('1525625293386-3f8f99389edd') },
+  { name: 'Kashmir', region: 'India', from: 32999, line: 'Houseboats on Dal Lake, meadows at Gulmarg, saffron at dusk.', img: unsplash('1595815771614-ade9d652a65d') },
+  { name: 'Kerala', region: 'India', from: 24999, line: 'Backwaters, tea hills and slow Ayurvedic mornings.', img: unsplash('1602216056096-3b40cc0c9944') },
+  { name: 'Rajasthan', region: 'India', from: 28999, line: 'Palace stays, desert camps and the colours of Jaipur.', img: unsplash('1599661046289-e31897846e41') },
+  { name: 'Bhutan', region: 'Himalaya', from: 49999, line: 'Monasteries in the clouds and the climb to Tiger’s Nest.', img: unsplash('1553856622-d1b352e9a211') },
+  { name: 'Maldives', region: 'Indian Ocean', from: 89999, line: 'Overwater villas, reef dives and nothing on the agenda.', img: unsplash('1514282401047-d79a71a590e8') },
+  { name: 'Santorini', region: 'Greece', from: 149999, line: 'Whitewashed cliffs, caldera sunsets, long lunches.', img: unsplash('1570077188670-e3a8d69ac5ff') },
+  { name: 'Vietnam', region: 'Southeast Asia', from: 59999, line: 'Ha Long’s limestone bays and Hoi An by lantern light.', img: unsplash('1528127269322-539801943592') },
 ];
 
 export const travelStyles = [

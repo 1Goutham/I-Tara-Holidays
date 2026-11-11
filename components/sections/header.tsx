@@ -3,73 +3,68 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { nav, site } from '@/lib/site';
+import { getLenis, gsap, ScrollTrigger } from '@/lib/gsap';
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [solid, setSolid] = useState(false);
+  const [dark, setDark] = useState(false);
   const [active, setActive] = useState('');
 
+  // Hide on scroll down, show on scroll up; switch to light text over dark sections.
   useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      setHidden(y > last && y > 320);
-      setSolid(y > 40);
-      last = y;
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => {
-          if (e.isIntersecting) setActive(e.target.id);
-          else setActive((cur) => (cur === e.target.id ? '' : cur));
-        }),
-      { rootMargin: '-45% 0px -50% 0px' },
-    );
-    nav.forEach((n) => {
-      const el = document.getElementById(n.id);
-      if (el) io.observe(el);
+    const st = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (s) => {
+        const y = s.scroll();
+        setSolid(y > 60);
+        setHidden(s.direction === 1 && y > 400);
+        const probe = document.elementsFromPoint(window.innerWidth / 2, 40).find((el) => el.closest('[data-theme]'));
+        setDark(probe?.closest<HTMLElement>('[data-theme]')?.dataset.theme === 'dark');
+      },
     });
-    return () => io.disconnect();
+    const sections = nav.map((n) =>
+      ScrollTrigger.create({
+        trigger: `#${n.id}`,
+        start: 'top 50%',
+        end: 'bottom 50%',
+        onToggle: (s) => s.isActive && setActive(n.id),
+        onLeaveBack: () => n.id === nav[0].id && setActive(''),
+      }),
+    );
+    return () => {
+      st.kill();
+      sections.forEach((s) => s.kill());
+    };
   }, []);
 
+  // Mobile menu
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
+    const lenis = getLenis();
     if (open) {
-      setMounted(true);
+      lenis?.stop();
+      gsap.fromTo('.mmenu', { clipPath: 'inset(0% 0% 100% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'expo.inOut' });
+      gsap.fromTo('.mmenu__link', { yPercent: 110 }, { yPercent: 0, duration: 1, stagger: 0.06, delay: 0.35 });
       const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
       document.addEventListener('keydown', onKey);
       return () => document.removeEventListener('keydown', onKey);
     }
-    const t = setTimeout(() => setMounted(false), 800);
-    return () => clearTimeout(t);
+    lenis?.start();
   }, [open]);
 
-  useEffect(() => {
-    if (!mounted) return setVisible(false);
-    const r = requestAnimationFrame(() => setVisible(open));
-    return () => cancelAnimationFrame(r);
-  }, [mounted, open]);
+  const close = () => {
+    gsap.to('.mmenu', { clipPath: 'inset(0% 0% 100% 0%)', duration: 0.7, ease: 'expo.inOut', onComplete: () => setOpen(false) });
+  };
 
   return (
     <>
-      <header className={`header${solid ? ' is-solid' : ''}${hidden && !open ? ' is-hidden' : ''}${open ? ' is-menu' : ''}`} id="top">
-        <div className="header__bar container">
+      <header className={`header${solid ? ' is-solid' : ''}${hidden && !open ? ' is-hidden' : ''}${dark && !open ? ' is-dark' : ''}`} id="top">
+        <div className="header__bar">
           <a href="#top" className="brand" aria-label={`${site.legalName}, home`}>
-            <Image src="/img/mark.png" alt="" width={44} height={44} priority />
-            <span className="brand__text">
-              <b>I Tara</b>
-              <small>{site.tagline}</small>
-            </span>
+            <Image src="/img/wordmark.png" alt="" width={150} height={44} priority className="brand__dark" />
+            <Image src="/img/wordmark-light.png" alt="" width={150} height={44} priority className="brand__light" />
           </a>
           <nav className="nav" aria-label="Primary">
             {nav.map((n) => (
@@ -79,37 +74,36 @@ export function Header() {
             ))}
           </nav>
           <div className="header__actions">
-            <a href="#contact" className="btn btn--dark btn--sm magnetic">
-              <span>Plan a trip</span>
-            </a>
+            <a href={site.phoneHref} className="header__phone">{site.phoneDisplay}</a>
+            <a href="#contact" className="btn btn--sm magnetic"><span>Plan a journey</span></a>
             <button
               className="burger"
               aria-label={open ? 'Close menu' : 'Open menu'}
               aria-expanded={open}
-              aria-controls="mobile-menu"
-              onClick={() => setOpen((o) => !o)}
+              aria-controls="mmenu"
+              onClick={() => (open ? close() : setOpen(true))}
             >
-              <span />
-              <span />
+              <span /><span />
             </button>
           </div>
         </div>
       </header>
 
-      <div className={`mobile-menu${visible ? ' is-open' : ''}`} id="mobile-menu" hidden={!mounted}>
-        <nav aria-label="Mobile">
-          {nav.map((n, i) => (
-            <a key={n.id} href={n.href} onClick={() => setOpen(false)} style={{ transitionDelay: visible ? `${200 + i * 60}ms` : '0ms' }}>
-              <small>0{i + 1}</small>
-              {n.label}
-            </a>
-          ))}
-        </nav>
-        <div className="mobile-menu__foot">
-          <a href={site.phoneHref}>{site.phoneDisplay}</a>
-          <a href={`mailto:${site.email}`}>{site.email}</a>
+      {open && (
+        <div className="mmenu" id="mmenu" data-theme="dark">
+          <nav aria-label="Mobile">
+            {nav.map((n, i) => (
+              <a key={n.id} href={n.href} onClick={close} className="mmenu__item">
+                <span className="mmenu__link"><small>0{i + 1}</small>{n.label}</span>
+              </a>
+            ))}
+          </nav>
+          <div className="mmenu__foot">
+            <a href={site.phoneHref}>{site.phoneDisplay}</a>
+            <a href={`mailto:${site.email}`}>{site.email}</a>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

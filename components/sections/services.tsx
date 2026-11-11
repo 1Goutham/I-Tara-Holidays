@@ -1,35 +1,24 @@
-import { Reveal } from '../ui/reveal';
-import { SplitHeading } from '../ui/split-heading';
-import { IconBriefcase, IconCompass, IconGroup, IconPassport, IconPlane } from '../illustrations';
 import { services } from '@/lib/data';
-
-const icons = [IconCompass, IconPlane, IconPassport, IconGroup, IconBriefcase];
 
 export function Services() {
   return (
-    <section className="services section" id="services">
-      <div className="container">
-        <div className="section-head section-head--split">
-          <div>
-            <Reveal as="p" className="kicker">What we do</Reveal>
-            <SplitHeading lines={['Everything,', '*handled.*']} />
-          </div>
-          <Reveal as="p" className="section-head__aside">
-            One team for the whole trip: planning, bookings, paperwork and support while you travel.
-          </Reveal>
+    <section className="svc section" id="services" data-theme="light">
+      <div className="container svc__grid">
+        <div className="svc__intro">
+          <p className="label" data-fade>(06) What we do</p>
+          <h2 className="h2" data-split>Everything, <em>handled.</em></h2>
+          <p className="svc__lead" data-fade>One team for the whole trip: planning, bookings, paperwork and someone on call while you travel.</p>
         </div>
-        <div className="svc">
-          {services.map((s, i) => {
-            const Icon = icons[i];
-            return (
-              <Reveal className="svc__item" key={s.title} delay={i * 80}>
-                <Icon className="svc__icon" />
-                <h3>{s.title}</h3>
-                <p>{s.text}</p>
-              </Reveal>
-            );
-          })}
-        </div>
+        <ol className="svc__list">
+          {services.map((s, i) => (
+            <li key={s.title} data-fade>
+              <span className="rule" data-rule />
+              <span className="svc__n">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{s.title}</h3>
+              <p>{s.text}</p>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
