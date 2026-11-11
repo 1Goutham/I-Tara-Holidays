@@ -18,6 +18,20 @@ const SRC = {
   mountains: '/img/hero/mountains.webp',
 };
 
+/**
+ * 4K masters (AI-upscaled) for large or high-density screens. The DOM plate uses srcset;
+ * WebGL reuses whichever plate the browser picked, so it is only downloaded once.
+ */
+const HI: Partial<Record<keyof typeof SRC, string>> = {
+  plate: '/img/hero/plate-4k.webp',
+  stump: '/img/hero/stump-4k.webp',
+  tent: '/img/hero/tent-4k.webp',
+  mountains: '/img/hero/mountains-4k.webp',
+};
+const wantsHi = () => typeof window !== 'undefined' && window.innerWidth * Math.min(window.devicePixelRatio || 1, 2) >= 1900;
+const domSrc = (a: 'stump' | 'tent') => (document.querySelector(`img[data-asset="${a}"]`) as HTMLImageElement | null)?.currentSrc;
+const pick = (k: keyof typeof SRC) => (wantsHi() && HI[k]) || SRC[k];
+
 /* ----------------------------------------------------------------------------
  * Scene layout, in landscape-plate pixels. `d` = depth (0 far → 1 near, >1 camera-side).
  * The tent, stump and grass strips are drawn by WebGL (light wrap, rim light, wind);
@@ -54,16 +68,16 @@ const DRAWS: Draw[] = [
 const MUG: [number, number] = [1128, 654];
 const STEAM_UNIT = 44;
 
-type Item = { kind: 'img' | 'glow' | 'shadow'; x: number; y: number; w: number; h?: number; src?: string; ratio?: number; cls?: string; screen?: boolean };
+type Item = { kind: 'img' | 'glow' | 'shadow'; x: number; y: number; w: number; h?: number; src?: string; ratio?: number; cls?: string; screen?: boolean; srcSet?: string; sizes?: string; asset?: 'stump' | 'tent' };
 type Layer = { key: string; d: number; zone: 'back' | 'front'; items: Item[] };
 const LAYERS: Layer[] = [
   { key: 'sun', d: 0.0, zone: 'back', items: [{ kind: 'img', src: '/img/hero/sun.webp', x: 830, y: 311, w: 897, ratio: 2000 / 512, cls: 'scene__sun' }] },
-  { key: 'stump', d: STUMP.d, zone: 'front', items: [{ kind: 'shadow', x: 760, y: 768, w: 520, h: 44 }, { kind: 'img', src: SRC.stump, ...STUMP, cls: 'scene__fallback' }] },
+  { key: 'stump', d: STUMP.d, zone: 'front', items: [{ kind: 'shadow', x: 760, y: 768, w: 520, h: 44 }, { kind: 'img', src: SRC.stump, ...STUMP, cls: 'scene__fallback', srcSet: '/img/hero/stump.webp 1300w, /img/hero/stump-4k.webp 2800w', sizes: '38vw', asset: 'stump' }] },
   {
     key: 'tent', d: TENT.d, zone: 'front',
     items: [
       { kind: 'shadow', x: 1260, y: 682, w: 660, h: 52 },
-      { kind: 'img', src: SRC.tent, ...TENT, cls: 'scene__fallback' },
+      { kind: 'img', src: SRC.tent, ...TENT, cls: 'scene__fallback', srcSet: '/img/hero/tent.webp 1300w, /img/hero/tent-4k.webp 2800w', sizes: '43vw', asset: 'tent' },
       { kind: 'glow', x: 1405 - 70, y: 402 - 70, w: 140, h: 140, cls: 'glow glow--lantern' },
       { kind: 'glow', x: 1617 - 55, y: 582 - 55, w: 110, h: 110, cls: 'glow glow--inner' },
     ],
@@ -247,7 +261,7 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
       const track = <T,>(p: Promise<T>) => p.then((v) => (emit('itara:hero-progress', ++done / total), v));
       try {
         const [img, depth, stump, tent, strip, mountains] = await Promise.all(
-          [SRC.plate, SRC.depth, SRC.stump, SRC.tent, SRC.strip, SRC.mountains].map((u) => track(loadImage(u))),
+          [plate.current?.currentSrc || pick('plate'), SRC.depth, domSrc('stump') || pick('stump'), domSrc('tent') || pick('tent'), SRC.strip, pick('mountains')].map((u) => track(loadImage(u))),
         );
         if (disposed) return;
         backR = new SceneRenderer(back.current!, img, depth, 0);
@@ -300,7 +314,7 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
           const data = `${it.x},${it.y},${it.w},${h}`;
           if (it.kind === 'img') {
             // eslint-disable-next-line @next/next/no-img-element -- pre-optimised cut-out with alpha
-            return <img key={j} data-item={it.screen ? undefined : data} src={it.src} alt="" className={`scene__prop ${it.cls ?? ''}`} decoding="async" />;
+            return <img key={j} data-item={it.screen ? undefined : data} src={it.src} srcSet={it.srcSet} sizes={it.sizes} data-asset={it.asset} alt="" className={`scene__prop ${it.cls ?? ''}`} decoding="async" />;
           }
           return <span key={j} data-item={data} className={it.kind === 'shadow' ? 'scene__shadow' : it.cls} />;
         })}
@@ -315,6 +329,8 @@ export const HeroScene = forwardRef<SceneHandle, { children?: ReactNode }>(funct
         ref={plate}
         className="scene__plate"
         src={SRC.plate}
+        srcSet={`${SRC.plate} 1755w, ${HI.plate} 3840w`}
+        sizes="100vw"
         alt="Dawn over misty forested hills, with a canvas tent, lantern, camp chair and a steaming mug on a tree stump"
         fetchPriority="high"
         decoding="async"
