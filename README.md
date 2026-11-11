@@ -58,3 +58,9 @@ public/img/            logo assets
 
 Works out of the box on Vercel: import the repo and set the environment variables above.
 It runs on any Node 20.9+ host with `npm run build && npm start`.
+
+### Vercel 404 (`NOT_FOUND`)
+If the Vercel project was first created while this repo was a static HTML site, its Framework Preset may still be
+"Other", with an output directory, so Vercel serves raw files instead of the Next.js app. `vercel.json` pins
+`"framework": "nextjs"`. Also check **Project Settings → Build & Deployment**: the Framework Preset should be Next.js
+and the Output Directory and Root Directory overrides should be empty. Then redeploy.
