@@ -9,7 +9,7 @@ export const FRAG = /* glsl */ `
 precision highp float;
 
 uniform sampler2D uImg;     // colour plate
-uniform sampler2D uDepth;   // r: depth (0 far → 1 near), g: fog mask, b: foliage mask
+uniform sampler2D uDepth;   // r: sharp depth (occlusion), g: fog mask, b: smooth depth (parallax)
 uniform vec2  uRes;         // canvas size (px)
 uniform vec2  uImgRes;      // plate size (px)
 uniform vec2  uCenter;      // plate uv at screen centre (cover crop focus)
@@ -37,7 +37,8 @@ float fbm(vec2 p) {
   return v;
 }
 
-float depthAt(vec2 uv) { return texture2D(uDepth, uv).r; }
+// parallax reads the smooth channel: depth steps become soft warps, so edges never tear
+float depthAt(vec2 uv) { return texture2D(uDepth, uv).b; }
 
 void main() {
   vec2 s = gl_FragCoord.xy / uRes;
@@ -46,23 +47,20 @@ void main() {
 
   // camera: slight overscan for parallax room; scroll dollies in, near layers faster (true depth)
   float zoom = 1.06 + (1.0 - uIntro) * 0.05 + uScroll * 0.08;
-  vec2 par = uMouse * vec2(0.022, 0.013);
+  vec2 par = uMouse * vec2(0.013, 0.007);
 
   vec2 uv = uCenter + base / zoom;
   float d = depthAt(uv);
-  for (int i = 0; i < 3; i++) {                      // relief iterations: resolve depth at the displaced point
-    uv = uCenter + base / (zoom * (1.0 + uScroll * 0.28 * d)) + par * (d - 0.3);
+  for (int i = 0; i < 2; i++) {                      // relief iterations: resolve depth at the displaced point
+    uv = uCenter + base / (zoom * (1.0 + uScroll * 0.24 * d)) + par * (d - 0.3);
     d = depthAt(uv);
   }
 
+  uv = clamp(uv, vec2(0.001), vec2(0.999));
   vec3 maps = texture2D(uDepth, uv).rgb;
-  float near = smoothstep(0.22, 0.30, d);
+  float near = smoothstep(0.22, 0.30, maps.r);
   if (uLayer > 0.5 && near < 0.003) discard;        // near-layer pass: only hills, meadow, camp and leaves
 
-  // leaves breathe in the breeze
-  float fol = maps.b;
-  uv += fol * vec2(sin(uTime * 1.3 + uv.y * 14.0), cos(uTime * 1.1 + uv.x * 11.0)) * 0.0018;
-  uv = clamp(uv, vec2(0.001), vec2(0.999));
   vec3 col = texture2D(uImg, uv).rgb;
 
   float aspect = uImgRes.x / uImgRes.y;
@@ -72,7 +70,7 @@ void main() {
   float sd = length(sv);
   float breathe = 0.92 + 0.08 * sin(uTime * 0.7);
   vec3 sunCol = vec3(1.0, 0.80, 0.52);
-  float skyish = 1.0 - smoothstep(0.15, 0.6, d);
+  float skyish = 1.0 - smoothstep(0.15, 0.6, maps.r);
   col += sunCol * (0.06 * exp(-sd * 3.5) + 0.22 * exp(-sd * 18.0) + 0.35 * exp(-sd * 60.0)) * breathe;
   float ang = atan(sv.y, sv.x);
   float shafts = pow(0.5 + 0.5 * sin(ang * 11.0 + noise(vec2(ang * 2.5, uTime * 0.05)) * 5.0 + uTime * 0.04), 4.0);
@@ -91,17 +89,22 @@ void main() {
   // low ground haze over the meadow edge
   col = mix(col, fogCol, smoothstep(0.55, 0.0, abs(uv.y - 0.74) * 6.0) * 0.08 * (1.0 + uScroll * 2.0));
 
-  // ---- coffee steam: curling wisps rising off the mug rim ----
-  vec2 st = (uv - uMug) * uImgRes / 46.0;           // ~46 px units, y grows downward
+  // ---- coffee steam: two thin, translucent wisps curling off the rim ----
+  vec2 st = (uv - uMug) * uImgRes / 40.0;           // ~40 px units, y grows downward
   float h = -st.y;
-  if (h > -0.2 && h < 4.0) {
-    float sway = sin(h * 1.9 - uTime * 1.4) * 0.16 * h + sin(h * 0.7 + uTime * 0.6) * 0.10 * h + uMouse.x * 0.10 * h;
-    float x = st.x - sway;
-    float w = 0.16 + h * 0.20;
-    float n = fbm(vec2(x * 2.6, h * 1.7 - uTime * 0.9));
-    float wisp = smoothstep(w, 0.0, abs(x)) * smoothstep(0.38, 0.78, n);
-    float life = smoothstep(-0.1, 0.35, h) * (1.0 - smoothstep(1.8, 3.8, h));
-    col = mix(col, vec3(1.0, 0.99, 0.96), wisp * life * 0.55);
+  if (h > -0.1 && h < 4.5) {
+    float steam = 0.0;
+    for (int k = 0; k < 2; k++) {
+      float fk = float(k);
+      float sway = sin(h * 1.7 - uTime * (1.1 + fk * 0.3) + fk * 2.1) * 0.12 * h
+                 + sin(h * 0.6 + uTime * 0.5 + fk) * 0.08 * h + uMouse.x * 0.08 * h;
+      float x = st.x - sway + (fk - 0.5) * 0.18;
+      float w = 0.07 + h * 0.10;
+      float n = fbm(vec2(x * 4.0 + fk * 3.7, h * 1.4 - uTime * (0.7 + fk * 0.2)));
+      steam += smoothstep(w, 0.0, abs(x)) * smoothstep(0.42, 0.75, n);
+    }
+    float life = smoothstep(0.0, 0.5, h) * (1.0 - smoothstep(1.4, 4.2, h));
+    col = mix(col, vec3(1.0, 0.99, 0.97), clamp(steam, 0.0, 1.0) * life * 0.4);
   }
 
   // ---- lantern + campfire flicker ----

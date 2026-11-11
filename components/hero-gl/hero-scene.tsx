@@ -9,7 +9,7 @@ export interface SceneHandle {
 }
 
 const PLATE_SRC = '/img/hero/plate.webp';
-const DEPTH_SRC = '/img/hero/depth.png';
+const DEPTH_SRC = '/img/hero/depth.webp';
 
 function load(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {

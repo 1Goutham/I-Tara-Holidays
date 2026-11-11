@@ -39,7 +39,7 @@ lib/
   gsap.ts              GSAP + ScrollTrigger + SplitText registration, Lenis handle, scrollToId
   site.ts · data.ts    brand/contact details · content
 public/img/            logo mark and wordmarks (dark + light)
-public/img/hero/       plate.webp (colour) + depth.png (R depth, G fog mask, B foliage mask)
+public/img/hero/       plate.webp (colour) + depth.webp (R sharp depth for occlusion, G fog mask, B smooth depth for parallax)
 ```
 
 ### Hero scene
