@@ -8,7 +8,10 @@ import type Lenis from 'lenis';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP);
-  gsap.defaults({ ease: 'expo.out', duration: 1.1 });
+  gsap.defaults({ ease: 'power3.out', duration: 1.2 });
+  // keep animations on the compositor; avoid sub-pixel text shimmer
+  gsap.config({ force3D: true });
+  ScrollTrigger.config({ ignoreMobileResize: true });
 }
 
 let lenis: Lenis | null = null;

@@ -9,7 +9,7 @@ import { prefersReducedMotion } from '@/lib/motion';
 export function SmoothScroll() {
   useEffect(() => {
     if (prefersReducedMotion()) return;
-    const lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.95, anchors: { offset: -70, duration: 1.6 } });
+    const lenis = new Lenis({ lerp: 0.075, wheelMultiplier: 0.9, smoothWheel: true, anchors: { offset: -70, duration: 1.6 } });
     setLenis(lenis);
     lenis.on('scroll', ScrollTrigger.update);
     const tick = (t: number) => lenis.raf(t * 1000);

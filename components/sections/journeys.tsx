@@ -54,7 +54,7 @@ export function Journeys() {
       });
       // card entrance (any viewport)
       if (!prefersReducedMotion()) {
-        gsap.from('.journey', { autoAlpha: 0, y: 40, duration: 1.2, stagger: 0.07, ease: 'power3.out', scrollTrigger: { trigger: track.current, start: 'top 85%', once: true } });
+        gsap.from('.journey', { autoAlpha: 0, y: 32, duration: 1.4, stagger: 0.08, ease: 'power3.out', force3D: true, immediateRender: true, scrollTrigger: { trigger: track.current, start: 'top 88%', once: true } });
       }
       // the pin length changed: re-measure every trigger below this section
       const raf = requestAnimationFrame(() => ScrollTrigger.refresh());

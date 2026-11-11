@@ -5,11 +5,17 @@ import { gsap, ScrollTrigger, SplitText, useGSAP } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
 /**
- * One place for scroll reveals, driven by data attributes in the markup:
- *   data-split   headings / lead text: lines rise out of a mask
- *   data-fade    blocks: soft rise + fade (siblings are staggered)
- *   data-img     image frames: clip wipe upward while the image settles from 1.25x
- *   data-rule    hairlines: draw from the left
+ * Scroll reveals driven by data attributes:
+ *   data-split   lines rise out of a mask
+ *   data-fade    soft rise + fade (siblings entering together are staggered)
+ *   data-img     clip wipe while the image settles
+ *   data-rule    hairline draws from the left
+ *
+ * Smoothness rules:
+ *  - every element's start state is applied up front, so nothing is ever visible and then re-hidden;
+ *  - transforms are forced onto the GPU (force3D) and only transform/opacity are animated;
+ *  - split lines stay split after they land (reverting re-rasterises text and causes a visible snap);
+ *    completed splits are only restored when the viewport width actually changes.
  */
 export function Reveals() {
   const { ready } = useSite();
@@ -23,45 +29,86 @@ export function Reveals() {
         return;
       }
 
-      // Split after fonts are ready (`ready` waits for them) and restore the original markup
-      // once the lines are in, so nothing stays clipped and resizes reflow naturally.
+      const ease = 'power4.out';
+      const landed: SplitText[] = [];
+
+      // headings & lead paragraphs
       gsap.utils.toArray<HTMLElement>('[data-split]').forEach((el) => {
         if (el.closest('[data-own-motion]')) return;
         const split = SplitText.create(el, { type: 'lines', mask: 'lines', linesClass: 'line' });
+        gsap.set(split.lines, { yPercent: 110, force3D: true });
         gsap.set(el, { visibility: 'visible' });
-        gsap.from(split.lines, {
-          yPercent: 118,
-          duration: 1.3,
-          stagger: 0.1,
-          ease: 'expo.out',
-          delay: parseFloat(el.dataset.delay || '0'),
-          scrollTrigger: { trigger: el, start: 'top 88%', once: true },
-          onComplete: () => split.revert(),
+        ScrollTrigger.create({
+          trigger: el,
+          start: 'top 88%',
+          once: true,
+          onEnter: () =>
+            gsap.to(split.lines, {
+              yPercent: 0,
+              duration: 1.5,
+              stagger: 0.11,
+              ease,
+              delay: parseFloat(el.dataset.delay || '0'),
+              onComplete: () => {
+                landed.push(split);
+              },
+            }),
         });
       });
 
-      gsap.set('[data-fade]', { visibility: 'visible' });
-      ScrollTrigger.batch('[data-fade]:not([data-own-motion] [data-fade])', {
-        start: 'top 90%',
+      // blocks: start state first, then batch-animate as they enter
+      const fades = gsap.utils.toArray<HTMLElement>('[data-fade]').filter((el) => !el.closest('[data-own-motion]'));
+      gsap.set(fades, { autoAlpha: 0, y: 28, force3D: true });
+      ScrollTrigger.batch(fades, {
+        start: 'top 92%',
         once: true,
         onEnter: (els) =>
-          gsap.from(els, { autoAlpha: 0, y: 36, duration: 1.2, ease: 'power3.out', stagger: 0.1, overwrite: true }),
+          gsap.to(els, { autoAlpha: 1, y: 0, duration: 1.4, ease: 'power3.out', stagger: 0.09, overwrite: true, clearProps: 'transform' }),
       });
 
+      // image frames
       gsap.utils.toArray<HTMLElement>('[data-img]').forEach((el) => {
-        gsap.set(el, { visibility: 'visible' });
         const img = el.querySelector('img');
-        const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top 85%', once: true } });
-        tl.fromTo(el, { clipPath: 'inset(100% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.5, ease: 'expo.inOut' });
-        if (img) tl.fromTo(img, { scale: 1.3 }, { scale: 1, duration: 2, ease: 'expo.out' }, 0.2);
+        gsap.set(el, { visibility: 'visible', clipPath: 'inset(100% 0% 0% 0%)' });
+        if (img) gsap.set(img, { scale: 1.22, force3D: true });
+        ScrollTrigger.create({
+          trigger: el,
+          start: 'top 86%',
+          once: true,
+          onEnter: () => {
+            gsap.to(el, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.6, ease: 'power3.inOut' });
+            if (img) gsap.to(img, { scale: 1, duration: 2.2, ease: 'power3.out', delay: 0.1 });
+          },
+        });
       });
 
-      gsap.utils.toArray<HTMLElement>('[data-rule]').forEach((el) => {
-        gsap.set(el, { visibility: 'visible' });
-        gsap.from(el, { scaleX: 0, transformOrigin: '0% 50%', duration: 1.6, ease: 'expo.inOut', scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
+      // hairlines
+      const rules = gsap.utils.toArray<HTMLElement>('[data-rule]');
+      gsap.set(rules, { visibility: 'visible', scaleX: 0, transformOrigin: '0% 50%' });
+      ScrollTrigger.batch(rules, {
+        start: 'top 94%',
+        once: true,
+        onEnter: (els) => gsap.to(els, { scaleX: 1, duration: 1.8, ease: 'power3.inOut', stagger: 0.06 }),
       });
+
+      // restore landed splits only when the width changes, so lines can re-wrap
+      let lastW = window.innerWidth;
+      let t: ReturnType<typeof setTimeout>;
+      const onResize = () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          if (window.innerWidth === lastW) return;
+          lastW = window.innerWidth;
+          landed.splice(0).forEach((s) => s.revert());
+        }, 200);
+      };
+      window.addEventListener('resize', onResize);
 
       ScrollTrigger.refresh();
+      return () => {
+        clearTimeout(t);
+        window.removeEventListener('resize', onResize);
+      };
     },
     { dependencies: [ready] },
   );

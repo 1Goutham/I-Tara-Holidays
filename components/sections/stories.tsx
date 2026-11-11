@@ -30,7 +30,7 @@ export function Stories() {
     }
     if (!quote.current || prefersReducedMotion()) return;
     const split = SplitText.create(quote.current, { type: 'lines', mask: 'lines' });
-    const tw = gsap.from(split.lines, { yPercent: 110, duration: 1.1, stagger: 0.07, onComplete: () => split.revert() });
+    const tw = gsap.from(split.lines, { yPercent: 110, duration: 1.3, stagger: 0.08, ease: 'power4.out', force3D: true });
     return () => {
       tw.kill();
       split.revert();

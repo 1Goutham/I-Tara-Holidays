@@ -63,11 +63,11 @@ export function Hero() {
         return;
       }
       const split = SplitText.create(q('.hero__title'), { type: 'lines', mask: 'lines', linesClass: 'line' });
-      const tl = gsap.timeline({ onComplete: () => split.revert() });
+      const tl = gsap.timeline({ defaults: { force3D: true } });
       tl.to(q('.hero__veil'), { autoAlpha: 0, duration: 1.8, ease: 'power2.inOut' }, 0)
-        .from(q('.hl--sun'), { yPercent: 60, duration: 3, ease: 'expo.out' }, 0.1)
-        .from(q('.hl__inner'), { yPercent: 10, duration: 2.6, stagger: 0.1, ease: 'expo.out' }, 0.15)
-        .from(split.lines, { yPercent: 118, duration: 1.6, stagger: 0.14, ease: 'expo.out' }, 0.55)
+        .from(q('.hl--sun'), { yPercent: 50, duration: 3.2, ease: 'power3.out' }, 0.1)
+        .from(q('.hl__inner'), { yPercent: 8, duration: 2.8, stagger: 0.1, ease: 'power3.out' }, 0.15)
+        .from(split.lines, { yPercent: 112, duration: 1.8, stagger: 0.15, ease: 'power4.out' }, 0.5)
         .from(q('.hero__bottom > *'), { autoAlpha: 0, y: 14, duration: 1.2, stagger: 0.1, ease: 'power3.out' }, 1.2);
     },
     { scope: root, dependencies: [ready] },
