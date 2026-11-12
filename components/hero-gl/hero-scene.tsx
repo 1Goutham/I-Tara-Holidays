@@ -71,7 +71,6 @@ const STEAM_UNIT = 44;
 type Item = { kind: 'img' | 'glow' | 'shadow'; x: number; y: number; w: number; h?: number; src?: string; ratio?: number; cls?: string; screen?: boolean; srcSet?: string; sizes?: string; asset?: 'stump' | 'tent' };
 type Layer = { key: string; d: number; zone: 'back' | 'front'; items: Item[] };
 const LAYERS: Layer[] = [
-  { key: 'sun', d: 0.0, zone: 'back', items: [{ kind: 'img', src: '/img/hero/sun.webp', x: 830, y: 311, w: 897, ratio: 2000 / 512, cls: 'scene__sun' }] },
   { key: 'stump', d: STUMP.d, zone: 'front', items: [{ kind: 'shadow', x: 760, y: 768, w: 520, h: 44 }, { kind: 'img', src: SRC.stump, ...STUMP, cls: 'scene__fallback', srcSet: '/img/hero/stump.webp 1300w, /img/hero/stump-4k.webp 2800w', sizes: '38vw', asset: 'stump' }] },
   {
     key: 'tent', d: TENT.d, zone: 'front',

@@ -81,8 +81,8 @@ export function Header() {
       <header className={`header${solid ? ' is-solid' : ''}${hidden && !open ? ' is-hidden' : ''}${dark && !open ? ' is-dark' : ''}`} id="top">
         <div className="header__bar">
           <a href="#top" className="brand" aria-label={`${site.legalName}, home`}>
-            <Image src="/img/logo-nav.webp" alt="" width={420} height={382} priority sizes="96px" className="brand__dark" />
-            <Image src="/img/logo-nav-light.webp" alt="" width={420} height={382} priority sizes="96px" className="brand__light" />
+            <Image src="/img/logo-h.webp" alt="" width={720} height={208} priority sizes="200px" className="brand__dark" />
+            <Image src="/img/logo-h-light.webp" alt="" width={720} height={208} priority sizes="200px" className="brand__light" />
           </a>
           <nav className="nav" aria-label="Primary">
             {nav.map((n) => (

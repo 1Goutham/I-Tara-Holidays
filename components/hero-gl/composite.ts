@@ -52,12 +52,6 @@ void main() {
     feather = smoothstep(0.0, 0.09, vUv.x) * smoothstep(1.0, 0.91, vUv.x) * smoothstep(1.0, 0.86, vUv.y);
   }
   vec4 c = texture2D(uTex, uv) * feather;
-  if (uMode > 2.5) {
-    // distance softens the ridgeline: a small blur of the silhouette
-    vec2 q = 1.6 / uRect.zw;
-    c = (c * 2.0 + texture2D(uTex, uv + vec2(q.x, 0.0)) + texture2D(uTex, uv - vec2(q.x, 0.0))
-         + texture2D(uTex, uv + vec2(0.0, q.y)) + texture2D(uTex, uv - vec2(0.0, q.y))) / 6.0;
-  }
   if (c.a < 0.003) discard;
   vec3 col = c.rgb / c.a * uShade;
 
