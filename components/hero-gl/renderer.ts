@@ -12,7 +12,7 @@ export const PLATE = {
   w: 1755,
   h: 896,
   sun: [1222, 417] as [number, number],
-  ridge: 0.552, // plate y where the near hills begin (the headline tucks behind it)
+  ridge: 0.515, // plate y where the near hills begin (the headline tucks behind it)
 };
 
 /** Camera shared by the shader and the DOM prop layers, so everything moves as one scene. */

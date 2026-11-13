@@ -243,8 +243,8 @@ body.is-loading { overflow: hidden; }
 @media (min-width: 1024px) { .hero__copy { padding-right: 18vw; } }
 .hero__title {
   position: relative; margin: 0; display: grid; justify-items: center; gap: 0.14em;
-  font-size: clamp(3rem, 7.8vw, 9rem); line-height: 0.95;
-  transform: translateY(0.04em);
+  font-size: clamp(3rem, min(7.1vw, 12.5vh), 8.4rem); line-height: 0.95;
+  transform: none;
 }
 /* the ink multiplies into the sky, so the dawn light tints it like printed type on the scene */
 .hero__copy { mix-blend-mode: multiply; }
