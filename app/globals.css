@@ -242,43 +242,45 @@ body.is-loading { overflow: hidden; }
 }
 @media (min-width: 1024px) { .hero__copy { padding-right: 18vw; } }
 .hero__title {
-  position: relative; margin: 0; display: grid; justify-items: center; gap: 0.02em;
+  position: relative; margin: 0; display: grid; justify-items: center; gap: 0.14em;
   font-size: clamp(3rem, 7.8vw, 9rem); line-height: 0.95;
-  transform: translateY(0.04em); /* the serif line's lower edge meets the ridge */
+  transform: translateY(0.04em);
 }
+/* the ink multiplies into the sky, so the dawn light tints it like printed type on the scene */
+.hero__copy { mix-blend-mode: multiply; }
 .ht { display: block; }
-/* line 1 · medium geometric sans, deep moss, tightly set */
+/* masthead line · medium sans, widely spaced capitals between fine gold rules */
 .ht--sans {
-  font-family: var(--f-body); font-weight: 500; font-size: 0.5em; line-height: 1.1;
-  letter-spacing: -0.035em; color: #1d4a35; white-space: nowrap; margin-bottom: 0.06em;
+  display: flex; align-items: center; gap: 0.9em;
+  font-family: var(--f-body); font-weight: 500; font-size: 0.22em; line-height: 1;
+  letter-spacing: 0.42em; text-transform: uppercase; color: #234b38; white-space: nowrap;
 }
+.ht__caps { padding-left: 0.42em; } /* balance the trailing letter-space */
+.ht__rule { display: block; width: 2.6em; height: 1px; background: linear-gradient(90deg, transparent, #a07a36); transform-origin: right center; }
+.ht__rule:last-child { background: linear-gradient(270deg, transparent, #a07a36); transform-origin: left center; }
 .ht__c, .ht__sp { display: inline-block; will-change: transform, opacity; }
-.ht__sp { width: 0.26em; }
-/* line 2 · bold serif in two gradient tones, masked for its rise */
+.ht__sp { width: 0.5em; }
+/* serif line · large, lit by the scene */
 .ht--serif {
-  font-family: var(--f-display); font-weight: 400; font-size: 1.12em; letter-spacing: -0.03em;
-  overflow: hidden; padding: 0.06em 0.12em 0.16em; margin: -0.06em -0.12em -0.16em;
-  filter: drop-shadow(0 4px 30px rgba(255, 238, 205, 0.35));
+  font-family: var(--f-display); font-weight: 400; font-size: 1.3em; letter-spacing: -0.035em; line-height: 0.92;
+  overflow: hidden; padding: 0.06em 0.14em 0.18em; margin: -0.06em -0.14em -0.18em;
 }
-.ht__in { display: inline-block; will-change: transform; white-space: nowrap; }
-.hero__title .ht__warm, .hero__title .ht__cool {
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  background-size: 260% 100%; background-position: 0% 50%; padding-right: 0.04em;
+.ht__in { position: relative; display: inline-block; will-change: transform; white-space: nowrap; }
+.ht__glow { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; filter: blur(1.5px); }
+.ht__w { -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 0.05em; background-repeat: no-repeat; }
+.ht__warm { font-style: italic; }
+/* one light field across the line, brightening toward the sun */
+.ht__ink .ht__warm { background-image: linear-gradient(90deg, #7d4f12 0%, #a26d1e 30%, #c98f35 52%, #e3b462 70%, #f3d48e 100%); }
+.ht__ink .ht__cool { background-image: linear-gradient(90deg, #04261a 0%, #0a3826 45%, #0f4d36 62%, #1b6a50 80%, #3d8a6a 100%); }
+.ht__ink .ht__w { background-size: var(--fw, 100%) 100%; background-position: var(--fx, 0px) 0; }
+/* sun bloom: only the glyph areas near the sun catch it */
+.ht__glow .ht__w {
+  background-image: radial-gradient(circle at var(--sx, 120%) var(--sy, 50%), rgba(255, 238, 196, 0.85) 0, rgba(255, 214, 140, 0.45) 8vw, rgba(255, 196, 110, 0.14) 18vw, transparent 30vw);
 }
-/* sunlit: amber into bronze, with a pale band that sweeps across on entrance */
-.ht__warm {
-  font-style: italic;
-  background-image: linear-gradient(100deg, #8a5a17 0%, #b47c25 16%, #d9a548 32%, #c98f33 42%, #f3cf80 50%, #fff3d4 55%, #f3cf80 60%, #b27a26 76%, #7d5115 100%);
-}
-/* forest into teal (the logo's halo), with the same travelling light */
-.ht__cool {
-  background-image: linear-gradient(100deg, #083321 0%, #0f4a33 18%, #146050 32%, #0f4a33 42%, #2a8a76 50%, #9fdccd 55%, #2a8a76 60%, #0f4a33 76%, #062a1c 100%);
-}
-/* hand-drawn plane and pen trail around the lockup */
-.hero__flight {
-  position: absolute; left: -16%; right: -16%; top: -42%; bottom: -8%; width: 132%; height: 150%;
-  overflow: visible; pointer-events: none; color: #1d4a35;
-}
+.ht__glow .ht__warm, .ht__glow .ht__cool { font-style: inherit; }
+.ht__glow .ht__warm { font-style: italic; }
+/* distant airliner and contrail, in the sky plane behind the headline */
+.sky-flight { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .flight__plane { will-change: transform; }
 .js .flight__plane { visibility: hidden; }
 .hero__fade { position: absolute; inset: auto 0 0 0; height: 38%; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(6, 38, 25, 0.28) 45%, rgba(6, 38, 25, 0.78)); }
@@ -581,8 +583,9 @@ body.is-scrolled .wa { transform: scale(1); }
   /* portrait: the headline sits in open sky above the sun */
   .hero__copy { height: auto; top: clamp(96px, 15vh, 140px); align-items: flex-start; z-index: 2; }
   .hero__title { font-size: clamp(2.7rem, 13vw, 4rem); transform: none; }
-  .ht--sans { font-size: 0.56em; }
-  .hero__flight { left: -6%; right: -6%; width: 112%; top: -30%; }
+  .ht--sans { font-size: 0.3em; letter-spacing: 0.32em; }
+  .sky-flight { transform: translateY(24%); }
+  .ht__rule { width: 1.6em; }
   .figures dd { font-size: 2.6rem; }
   .dest__label { font-size: 2rem; }
   .enquiry__row { grid-template-columns: 1fr; }
