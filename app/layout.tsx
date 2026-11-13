@@ -4,7 +4,7 @@ import { site } from '@/lib/site';
 import './globals.css';
 
 const display = DM_Serif_Display({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
-const body = Jost({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-body', display: 'swap' });
+const body = Jost({ subsets: ['latin'], weight: ['300', '400', '500', '600'], variable: '--font-body', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

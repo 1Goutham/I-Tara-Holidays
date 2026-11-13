@@ -3,11 +3,12 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { useGSAP } from '@gsap/react';
 import type Lenis from 'lenis';
 
 if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP);
+  gsap.registerPlugin(ScrollTrigger, SplitText, MotionPathPlugin, useGSAP);
   gsap.defaults({ ease: 'power3.out', duration: 1.2 });
   // keep animations on the compositor; avoid sub-pixel text shimmer
   gsap.config({ force3D: true });
@@ -26,4 +27,4 @@ export function scrollToId(id: string) {
   else el.scrollIntoView({ behavior: 'smooth' });
 }
 
-export { gsap, ScrollTrigger, SplitText, useGSAP };
+export { gsap, MotionPathPlugin, ScrollTrigger, SplitText, useGSAP };

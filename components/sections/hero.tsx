@@ -3,7 +3,8 @@
 import { useRef } from 'react';
 import { useSite } from '../providers';
 import { HeroScene, type SceneHandle } from '../hero-gl/hero-scene';
-import { gsap, SplitText, useGSAP } from '@/lib/gsap';
+import { HeroTitle } from './hero-title';
+import { gsap, useGSAP } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/lib/motion';
 
 /**
@@ -27,6 +28,7 @@ export function Hero() {
       })
         .to(proxy, { p: 1, duration: 1, onUpdate: () => scene.current && (scene.current.state.scroll = proxy.p) }, 0)
         .fromTo(q('.hero__title'), { filter: 'blur(0px)' }, { yPercent: -38, autoAlpha: 0, filter: 'blur(18px)', duration: 0.6, ease: 'power1.in' }, 0)
+        .to(q('.hero__flight'), { xPercent: 22, yPercent: -40, duration: 0.6, ease: 'power1.in' }, 0)
         .fromTo(q('.hero__bottom'), { filter: 'blur(0px)' }, { autoAlpha: 0, y: 20, filter: 'blur(8px)', duration: 0.3 }, 0)
         .to(q('.hero__shade'), { autoAlpha: 1, duration: 0.4, ease: 'power1.in' }, 0.6);
     },
@@ -43,14 +45,39 @@ export function Hero() {
         if (s) s.intro = 1;
         return;
       }
-      const split = SplitText.create(q('.hero__title'), { type: 'lines', mask: 'lines', linesClass: 'line' });
-      gsap.set(split.lines, { yPercent: 112 });
       const tl = gsap.timeline();
       if (s) tl.to(s, { intro: 1, duration: 3.4, ease: 'power2.out' }, 0);
       tl.from(q('.scene__branch'), { xPercent: 8, yPercent: -10, duration: 2.6, ease: 'power3.out' }, 0.1)
         .from(q('.scene__bushes'), { yPercent: 14, duration: 2.4, ease: 'power3.out' }, 0.1);
-      tl.to(split.lines, { yPercent: 0, duration: 1.8, stagger: 0.14, ease: 'power4.out' }, 0.45)
-        .from(q('.hero__bottom > *'), { autoAlpha: 0, y: 14, duration: 1.3, stagger: 0.1, ease: 'power3.out' }, 1.1);
+
+      // line 1 · letters rise out of a soft blur, one after another
+      tl.fromTo(
+        q('.ht__c'),
+        { yPercent: 70, autoAlpha: 0, filter: 'blur(10px)' },
+        { yPercent: 0, autoAlpha: 1, filter: 'blur(0px)', duration: 1.3, stagger: 0.035, ease: 'power3.out', clearProps: 'filter' },
+        0.5,
+      );
+      // line 2 · the serif rises out of its mask, then sunlight sweeps across it
+      tl.fromTo(q('.ht__in'), { yPercent: 108 }, { yPercent: 0, duration: 1.7, ease: 'power4.out' }, 0.85)
+        .fromTo(q('.ht__warm, .ht__cool'), { backgroundPosition: '100% 50%' }, { backgroundPosition: '0% 50%', duration: 2.2, ease: 'power2.inOut', stagger: 0.12 }, 1.2);
+
+      // the plane inks its trail in, loops, and settles above the lockup
+      const trail = root.current?.querySelector<SVGPathElement>('.flight__trail');
+      const reveal = root.current?.querySelector<SVGPathElement>('.flight__reveal');
+      const plane = q('.flight__plane')[0];
+      if (trail && reveal && plane) {
+        const L = reveal.getTotalLength();
+        gsap.set(reveal, { strokeDasharray: L, strokeDashoffset: L });
+        gsap.set(plane, { autoAlpha: 0 });
+        tl.set(plane, { autoAlpha: 1 }, 1.0)
+          .to(reveal, { strokeDashoffset: 0, duration: 3.4, ease: 'power2.inOut' }, 1.0)
+          .to(plane, { duration: 3.4, ease: 'power2.inOut', motionPath: { path: trail, align: trail, alignOrigin: [0.5, 0.5], autoRotate: true } }, 1.0)
+          .add(() => {
+            gsap.to(plane, { y: '-=6', rotation: '-=4', duration: 1.8, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+          });
+      }
+
+      tl.from(q('.hero__bottom > *'), { autoAlpha: 0, y: 14, duration: 1.3, stagger: 0.1, ease: 'power3.out' }, 1.4);
     },
     { scope: root, dependencies: [ready] },
   );
@@ -60,9 +87,7 @@ export function Hero() {
       <div className="hero__pin">
         <HeroScene ref={scene}>
           <div className="hero__copy">
-            <h1 className="hero__title">
-              Every journey,<br /> <em>watched</em> over.
-            </h1>
+            <HeroTitle />
           </div>
         </HeroScene>
         <div className="hero__fade" aria-hidden="true" />
