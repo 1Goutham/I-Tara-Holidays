@@ -8,8 +8,8 @@ import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 /**
  * Opening sequence: the logo is unveiled behind a soft wipe while a fine gold line follows
- * the hero's assets; when everything is in, the logo lifts away and a widening iris opens
- * onto the dawn scene. Never holds the page longer than 6s.
+ * the hero's assets; when everything is in, the logo lifts away and the loader dissolves
+ * onto the dawn scene with a soft dissolve. Never holds the page longer than 6s.
  */
 export function Boot() {
   const { setReady } = useSite();
@@ -46,26 +46,34 @@ export function Boot() {
       document.body.classList.add('is-ready');
       getLenis()?.start();
       setReady(true);
-      ScrollTrigger.refresh();
     };
+    // Kick off the page's setup work (heading splits, scroll measurements) while the loader
+    // still covers everything, give the main thread a moment to finish it, then exit with
+    // compositor-only motion (opacity / transform), so nothing competes with the animation.
     const exit = () => {
+      open();
       if (reduce) {
-        open();
         setGone(true);
         return;
       }
-      gsap
-        .timeline({ onComplete: () => setGone(true) })
-        .to(q('.loader__inner'), { autoAlpha: 0, y: -18, filter: 'blur(6px)', duration: 0.7, ease: 'power2.in' })
-        .add(open, '-=0.15')
-        .fromTo(el, { '--r': '0vmax' }, { '--r': '150vmax', duration: 1.5, ease: 'power3.inOut' }, '-=0.2');
+      let frames = 0;
+      const settle = () => {
+        if (++frames < 3) return requestAnimationFrame(settle);
+        setTimeout(() => {
+          gsap
+            .timeline({ onComplete: () => setGone(true) })
+            .to(q('.loader__inner'), { autoAlpha: 0, y: -14, duration: 0.6, ease: 'power2.in' })
+            .to(el, { autoAlpha: 0, duration: 1.1, ease: 'power2.inOut' }, 0.3);
+        }, 220);
+      };
+      requestAnimationFrame(settle);
     };
     const tryRelease = () => {
       if (released || !introDone) return;
       if (!(heroReady && fontsReady)) return;
       released = true;
       target = 1;
-      gsap.delayedCall(0.55, exit);
+      gsap.delayedCall(0.6, exit);
     };
 
     // intro: the logo is unveiled left to right, the line and figures fade in

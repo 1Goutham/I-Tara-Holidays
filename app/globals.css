@@ -156,12 +156,10 @@ body.is-loading { overflow: hidden; }
 
 /* ---------- Loader ---------- */
 .loader {
-  --r: 0vmax;
   position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--paper);
-  -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent var(--r), #000 calc(var(--r) + 1px));
-  mask-image: radial-gradient(circle at 50% 46%, transparent var(--r), #000 calc(var(--r) + 1px));
+  will-change: opacity; contain: strict;
 }
-.loader__inner { display: grid; justify-items: center; gap: 34px; width: min(340px, 72vw); }
+.loader__inner { will-change: transform, opacity; display: grid; justify-items: center; gap: 34px; width: min(340px, 72vw); }
 .loader__logo { width: 100%; height: auto; }
 .loader__meta { display: grid; gap: 12px; width: 100%; }
 .loader__line { display: block; height: 1px; background: var(--line); overflow: hidden; }

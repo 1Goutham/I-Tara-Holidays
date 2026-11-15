@@ -56,7 +56,7 @@ Two canvases share one camera (`camera()` and `layerTransform()` in `components/
 - **DOM layers:** sun branch (swaying), bushes (defocused foreground) and lantern glows. DOM copies of the tent and stump are the fallback when WebGL is unavailable.
 - **4K masters:** `plate-4k`, `mountains-4k`, `tent-4k` and `stump-4k` were upscaled with Real-ESRGAN x4plus and then downsampled. Large or high-density screens get them through `srcset` (the plate, tent and stump) or a width check (the mountains). WebGL reuses whichever file the browser picked, so nothing downloads twice.
 - **Plane:** `plane.webp` flies a looping climb across the sky (`components/sections/sky-flight.tsx`). It is a small, hazed, distant aircraft on a slow straight line with a long thin contrail.
-- **Loader:** the logo is unveiled while a gold line follows the hero's asset loading, then an iris opens onto the scene. It waits for fonts and hero assets, at most 6 s.
+- **Loader:** the logo is unveiled while a gold line follows the hero's asset loading, then the loader dissolves onto the scene. It waits for fonts and hero assets, at most 6 s.
 
 ### Motion conventions
 Add these attributes to markup and `components/motion/reveals.tsx` animates them:
