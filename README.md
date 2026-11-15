@@ -55,7 +55,8 @@ Two canvases share one camera (`camera()` and `layerTransform()` in `components/
 - **Grass:** `public/img/hero/grass-strip.webp` is built from real blades cut out of the rock photo, layered in three rows. The shader adds wind: a gust travels along the strip, the tips move while the roots stay planted, and the strip ends feather out.
 - **DOM layers:** sun branch (swaying), bushes (defocused foreground) and lantern glows. DOM copies of the tent and stump are the fallback when WebGL is unavailable.
 - **4K masters:** `plate-4k`, `mountains-4k`, `tent-4k` and `stump-4k` were upscaled with Real-ESRGAN x4plus and then downsampled. Large or high-density screens get them through `srcset` (the plate, tent and stump) or a width check (the mountains). WebGL reuses whichever file the browser picked, so nothing downloads twice.
-- **Loader:** a minimal logo loader waits for fonts and the hero assets (at most 6 s).
+- **Plane:** `plane.webp` flies a looping climb across the sky (`components/sections/sky-flight.tsx`). It recedes as it goes, trails engine contrails, and banks and shifts with the pointer.
+- **Loader:** the logo is unveiled while a gold line follows the hero's asset loading, then an iris opens onto the scene. It waits for fonts and hero assets, at most 6 s.
 
 ### Motion conventions
 Add these attributes to markup and `components/motion/reveals.tsx` animates them:

@@ -7,54 +7,86 @@ import { getLenis, gsap, ScrollTrigger } from '@/lib/gsap';
 import { hasFinePointer, prefersReducedMotion } from '@/lib/motion';
 
 /**
- * Minimal loader: the logo mark and a hairline that follows the hero's assets.
- * Releases the page (and the hero's dawn entrance) once fonts and the scene are ready —
- * never later than 6s, so a slow connection still gets the page.
+ * Opening sequence: the logo is unveiled behind a soft wipe while a fine gold line follows
+ * the hero's assets; when everything is in, the logo lifts away and a widening iris opens
+ * onto the dawn scene. Never holds the page longer than 6s.
  */
 export function Boot() {
   const { setReady } = useSite();
-  const [progress, setProgress] = useState(0.08);
-  const [leaving, setLeaving] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
   const [gone, setGone] = useState(false);
 
   useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const reduce = prefersReducedMotion();
     let released = false;
     let heroReady = false;
     let fontsReady = false;
+    let introDone = reduce;
     document.body.classList.add('is-loading');
     getLenis()?.stop();
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const release = () => {
-      if (released) return;
+    const q = gsap.utils.selector(el);
+    const shown = { p: 0 };
+    let target = 0.06;
+    const pct = q('.loader__pct')[0];
+    const line = q('.loader__line i')[0];
+    const render = () => {
+      if (line) line.style.transform = `scaleX(${shown.p.toFixed(4)})`;
+      if (pct) pct.textContent = String(Math.round(shown.p * 100)).padStart(2, '0');
+    };
+    const follow = gsap.ticker.add(() => {
+      shown.p += (target - shown.p) * 0.08;
+      if (target === 1 && shown.p > 0.995) shown.p = 1;
+      render();
+    });
+
+    const open = () => {
+      document.body.classList.remove('is-loading');
+      document.body.classList.add('is-ready');
+      getLenis()?.start();
+      setReady(true);
+      ScrollTrigger.refresh();
+    };
+    const exit = () => {
+      if (reduce) {
+        open();
+        setGone(true);
+        return;
+      }
+      gsap
+        .timeline({ onComplete: () => setGone(true) })
+        .to(q('.loader__inner'), { autoAlpha: 0, y: -18, filter: 'blur(6px)', duration: 0.7, ease: 'power2.in' })
+        .add(open, '-=0.15')
+        .fromTo(el, { '--r': '0vmax' }, { '--r': '150vmax', duration: 1.5, ease: 'power3.inOut' }, '-=0.2');
+    };
+    const tryRelease = () => {
+      if (released || !introDone) return;
+      if (!(heroReady && fontsReady)) return;
       released = true;
-      setProgress(1);
-      timers.push(setTimeout(() => {
-        setLeaving(true);
-        document.body.classList.remove('is-loading');
-        document.body.classList.add('is-ready');
-        getLenis()?.start();
-        setReady(true);
-        ScrollTrigger.refresh();
-      }, 260));
-      timers.push(setTimeout(() => setGone(true), 1400));
+      target = 1;
+      gsap.delayedCall(0.55, exit);
     };
-    const check = () => heroReady && fontsReady && release();
-    const onProgress = (e: Event) => setProgress((p) => Math.max(p, 0.1 + 0.85 * Number((e as CustomEvent).detail || 0)));
-    const onReady = () => {
-      heroReady = true;
-      check();
-    };
+
+    // intro: the logo is unveiled left to right, the line and figures fade in
+    if (!reduce) {
+      gsap
+        .timeline({ onComplete: () => { introDone = true; tryRelease(); } })
+        .fromTo(q('.loader__logo'), { clipPath: 'inset(0 100% 0 0)', y: 8 }, { clipPath: 'inset(0 0% 0 0)', y: 0, duration: 1.3, ease: 'power3.inOut' })
+        .fromTo(q('.loader__meta'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 0.5);
+    }
+
+    const onProgress = (e: Event) => { target = Math.max(target, 0.08 + 0.84 * Number((e as CustomEvent).detail || 0)); };
+    const onReady = () => { heroReady = true; tryRelease(); };
     window.addEventListener('itara:hero-progress', onProgress);
     window.addEventListener('itara:hero-ready', onReady);
-    (document.fonts?.ready ?? Promise.resolve()).then(() => {
-      fontsReady = true;
-      check();
-    });
-    timers.push(setTimeout(release, 6000));
+    (document.fonts?.ready ?? Promise.resolve()).then(() => { fontsReady = true; tryRelease(); });
+    const cap = setTimeout(() => { heroReady = fontsReady = introDone = true; tryRelease(); }, 6000);
     const refresh = () => ScrollTrigger.refresh();
     window.addEventListener('load', refresh, { once: true });
     return () => {
-      timers.forEach(clearTimeout);
+      clearTimeout(cap);
+      gsap.ticker.remove(follow);
       window.removeEventListener('itara:hero-progress', onProgress);
       window.removeEventListener('itara:hero-ready', onReady);
       window.removeEventListener('load', refresh);
@@ -63,9 +95,17 @@ export function Boot() {
 
   if (gone) return null;
   return (
-    <div className={`loader${leaving ? ' is-leaving' : ''}`} aria-hidden="true">
-      <Image src="/img/mark.png" alt="" width={72} height={72} priority className="loader__mark" />
-      <span className="loader__bar"><i style={{ transform: `scaleX(${progress})` }} /></span>
+    <div className="loader" ref={root} aria-hidden="true">
+      <div className="loader__inner">
+        <Image src="/img/logo-h.webp" alt="" width={720} height={208} priority sizes="340px" className="loader__logo" />
+        <div className="loader__meta">
+          <span className="loader__line"><i /></span>
+          <span className="loader__row">
+            <span>Preparing your journey</span>
+            <span className="loader__pct">00</span>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

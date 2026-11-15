@@ -152,13 +152,22 @@ em { font-style: italic; }
 }
 
 /* ---------- Loader ---------- */
-.loader { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; align-content: center; gap: 26px; background: var(--paper); transition: opacity 1s var(--ease), visibility 0s 1s; }
-.loader.is-leaving { opacity: 0; visibility: hidden; }
-.loader__mark { width: 64px; height: 64px; animation: breathe 2.6s ease-in-out infinite; }
-@keyframes breathe { 50% { transform: scale(1.05); opacity: 0.85; } }
-.loader__bar { display: block; width: 120px; height: 1px; background: var(--line); overflow: hidden; }
-.loader__bar i { display: block; height: 100%; background: var(--green-900); transform-origin: left; transition: transform 0.6s var(--ease); }
 body.is-loading { overflow: hidden; }
+
+/* ---------- Loader ---------- */
+.loader {
+  --r: 0vmax;
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--paper);
+  -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent var(--r), #000 calc(var(--r) + 1px));
+  mask-image: radial-gradient(circle at 50% 46%, transparent var(--r), #000 calc(var(--r) + 1px));
+}
+.loader__inner { display: grid; justify-items: center; gap: 34px; width: min(340px, 72vw); }
+.loader__logo { width: 100%; height: auto; }
+.loader__meta { display: grid; gap: 12px; width: 100%; }
+.loader__line { display: block; height: 1px; background: var(--line); overflow: hidden; }
+.loader__line i { display: block; height: 100%; background: linear-gradient(90deg, #a07a36, #d6ad5c); transform-origin: left; transform: scaleX(0); }
+.loader__row { display: flex; justify-content: space-between; font-size: 0.66rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+.loader__pct { font-feature-settings: 'tnum'; letter-spacing: 0.08em; color: var(--green-900); }
 
 /* ---------- Header ---------- */
 .header { position: fixed; inset: 0 0 auto; z-index: 200; transform: translateZ(0); will-change: transform; transition: transform 0.9s var(--ease), background 0.5s, color 0.5s; }
@@ -280,9 +289,20 @@ body.is-loading { overflow: hidden; }
 .ht__glow .ht__warm, .ht__glow .ht__cool { font-style: inherit; }
 .ht__glow .ht__warm { font-style: italic; }
 /* distant airliner and contrail, in the sky plane behind the headline */
-.sky-flight { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.flight__plane { will-change: transform; }
-.js .flight__plane { visibility: hidden; }
+.sky-flight { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.plane { position: absolute; left: 0; top: 0; width: clamp(130px, 15vw, 290px); visibility: hidden; will-change: transform, opacity; }
+.plane__tilt, .plane__body { will-change: transform; }
+.plane__orient { position: relative; transform: rotate(12deg); }
+/* warmed by the dawn light, softened by the air between */
+.plane__img { position: relative; display: block; width: 100%; height: auto; filter: sepia(0.22) saturate(1.12) brightness(1.03) contrast(0.94); }
+/* contrails: a tapering streak behind each engine, fading with distance */
+.plane__trail {
+  position: absolute; width: 170%; height: 7%; transform-origin: 100% 50%; transform: translateY(-50%) rotate(-11deg);
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.95), rgba(255, 252, 245, 0.5) 45%, transparent);
+  clip-path: polygon(0 0, 100% 42%, 100% 58%, 0 100%); filter: blur(1.4px);
+}
+.plane__trail--a { right: 54%; top: 51%; }
+.plane__trail--b { right: 26%; top: 72%; }
 .hero__fade { position: absolute; inset: auto 0 0 0; height: 38%; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(6, 38, 25, 0.28) 45%, rgba(6, 38, 25, 0.78)); }
 .hero__shade { position: absolute; inset: 0; background: var(--green-950); opacity: 0; visibility: hidden; pointer-events: none; }
 
@@ -584,7 +604,6 @@ body.is-scrolled .wa { transform: scale(1); }
   .hero__copy { height: auto; top: clamp(96px, 15vh, 140px); align-items: flex-start; z-index: 2; }
   .hero__title { font-size: clamp(2.7rem, 13vw, 4rem); transform: none; }
   .ht--sans { font-size: 0.3em; letter-spacing: 0.32em; }
-  .sky-flight { transform: translateY(24%); }
   .ht__rule { width: 1.6em; }
   .figures dd { font-size: 2.6rem; }
   .dest__label { font-size: 2rem; }
@@ -597,5 +616,6 @@ body.is-scrolled .wa { transform: scale(1); }
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
-  .js [data-split], .js [data-fade], .js [data-img], .js [data-rule], .js .hero__title, .js .hero__bottom, .js .flight__plane { visibility: visible; }
+  .js [data-split], .js [data-fade], .js [data-img], .js [data-rule], .js .hero__title, .js .hero__bottom { visibility: visible; }
+  .sky-flight { display: none; }
 }
