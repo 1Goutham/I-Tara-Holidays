@@ -13,7 +13,7 @@ export async function submitForm(kind: 'enquiry' | 'newsletter', data: Record<st
 
   if (res?.ok) return;
   if (res?.status === 503 && mailtoFallback) {
-    const subject = kind === 'enquiry' ? `New holiday enquiry — ${data.destination || 'General'}` : 'Newsletter signup';
+    const subject = kind === 'enquiry' ? `New holiday enquiry: ${data.destination || 'General'}` : 'Newsletter signup';
     const body = Object.entries(data)
       .filter(([, v]) => v)
       .map(([k, v]) => `${k}: ${v}`)

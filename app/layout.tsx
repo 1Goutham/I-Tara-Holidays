@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     url: '/',
     siteName: site.legalName,
     title: site.legalName,
-    description: 'Tailored journeys, handpicked stays and 24/7 care — holidays designed around you.',
+    description: 'Tailored journeys, handpicked stays and 24/7 care: holidays designed around you.',
     images: [{ url: '/img/logo.webp', width: 640, height: 583, alt: site.legalName }],
     locale: 'en_IN',
   },
@@ -43,7 +43,7 @@ const jsonLd = {
   telephone: site.phoneHref.replace('tel:', ''),
   email: site.email,
   address: { '@type': 'PostalAddress', addressCountry: 'IN' },
-  priceRange: '₹₹–₹₹₹₹',
+  priceRange: '₹₹ to ₹₹₹₹',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

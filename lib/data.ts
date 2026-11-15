@@ -18,7 +18,7 @@ export interface Package {
 }
 
 export const packages: Package[] = [
-  { title: 'Kashmir — Paradise on Earth', place: 'Srinagar · Gulmarg · Pahalgam', days: '6N / 7D', price: 32999, was: 38999, rating: 4.9, reviews: 1240, tag: 'Bestseller', cat: ['india', 'honeymoon'], img: unsplash('1595815771614-ade9d652a65d'), perks: ['Houseboat stay', 'Shikara ride', 'Gondola'] },
+  { title: 'Kashmir, Paradise on Earth', place: 'Srinagar · Gulmarg · Pahalgam', days: '6N / 7D', price: 32999, was: 38999, rating: 4.9, reviews: 1240, tag: 'Bestseller', cat: ['india', 'honeymoon'], img: unsplash('1595815771614-ade9d652a65d'), perks: ['Houseboat stay', 'Shikara ride', 'Gondola'] },
   { title: 'Kerala Backwaters & Hills', place: 'Munnar · Thekkady · Alleppey', days: '5N / 6D', price: 24999, was: 29999, rating: 4.8, reviews: 980, tag: 'Popular', cat: ['india', 'honeymoon'], img: unsplash('1593693397690-362cb9666fc2'), perks: ['Private houseboat', 'Tea estates', 'Ayurveda'] },
   { title: 'Royal Rajasthan', place: 'Jaipur · Udaipur · Jodhpur', days: '7N / 8D', price: 38499, was: 44999, rating: 4.8, reviews: 760, tag: 'Heritage', cat: ['india'], img: unsplash('1477587458883-47145ed94245'), perks: ['Palace hotels', 'Desert camp', 'City tours'] },
   { title: 'Ladakh Road Expedition', place: 'Leh · Nubra · Pangong', days: '6N / 7D', price: 35999, was: 41999, rating: 4.9, reviews: 610, tag: 'Adventure', cat: ['india'], img: unsplash('1581793745862-99fde7fa73d2'), perks: ['Khardung La', 'Lake camps', 'Oxygen support'] },
